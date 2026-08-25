@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: verax
+      POSTGRES_USER: verax
+      POSTGRES_PASSWORD: verax
+    ports:
+      - "5432:5432"
+    volumes:
+      - verax_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verax"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/verax
+      DATABASE_USER: verax
+      DATABASE_PASSWORD: verax
+      PORT: 8080
+      VERAX_JWT_SECRET: change-me-in-production-use-a-long-random-string-at-least-256-bits-long!!
+      VERAX_SEED: "true"
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  verax_pg:

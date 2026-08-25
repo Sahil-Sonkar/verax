@@ -1,0 +1,10 @@
+UPDATE categories SET color = '#3dffb0' WHERE name = 'Body';
+UPDATE categories SET color = '#4cc9f0' WHERE name = 'Career';
+UPDATE categories SET color = '#ff5fb2' WHERE name = 'Content';
+UPDATE categories SET color = '#ffd43b' WHERE name = 'Appearance';
+UPDATE categories SET color = '#c77dff' WHERE name = 'Learning';
+UPDATE categories SET color = '#ff8c42' WHERE name = 'Personal';
+UPDATE categories SET color = '#2eeac5' WHERE name = 'Finance';
+UPDATE categories SET color = '#7dfe6a' WHERE name = 'Health';
+UPDATE categories SET color = '#ff6b8a' WHERE name = 'Relationships';
+UPDATE categories SET color = '#9bb7ff' WHERE name = 'Other';
