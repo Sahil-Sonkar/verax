@@ -1,6 +1,6 @@
 # fly.toml app configuration file generated for Verax API
-app = "verax-api"
-primary_region = "bom"
+app = "verax-sonkar-api"
+primary_region = "sin"
 
 [build]
   dockerfile = "Dockerfile"
@@ -9,6 +9,7 @@ primary_region = "bom"
   PORT = "8080"
   VERAX_SEED = "false"
   VERAX_JWT_TTL = "30d"
+  JAVA_TOOL_OPTIONS = "-XX:MaxRAMPercentage=75.0"
 
 [http_service]
   internal_port = 8080
@@ -27,4 +28,4 @@ primary_region = "bom"
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "512mb"
+  memory = "1024mb"

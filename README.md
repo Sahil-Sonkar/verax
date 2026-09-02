@@ -41,7 +41,7 @@ The Voice rule: **do not build a content life. Build a great life and document i
 |---|---|
 | **Local** | Postgres 16, Java 21 API on **8081**, Vite on **5173**. [Full steps](#48-run-locally). |
 | **Demo login** | `demo@verax.app` / `verax-demo` |
-| **Production** | Web on [Vercel](https://vercel.com) (this repo). API + Postgres on [Fly.io](https://fly.io) — Spring Boot cannot run on Vercel. `vercel.json` proxies `/api` to the Fly app so the site is one origin. |
+| **Production** | Web on [Vercel](https://vercel.com). API + data on [Fly.io](https://fly.io) (`verax-sonkar-api`). `/api` is proxied so the site is one origin. |
 | **Updates** | Push `main`. Vercel rebuilds the PWA. Open the home-screen icon; it fetches the new HTML and hashed assets. |
 | **iPhone** | Safari → Share → **Add to Home Screen**. Same login. Tokens last 30 days. |
 
@@ -1108,23 +1108,23 @@ The **website** is Vercel. The **API and your data** are Fly.io (Java 21 + Postg
 ```bash
 # API + database (from backend/)
 fly auth login
-fly apps create verax-api --org personal
-fly postgres create --name verax-db --region bom --initial-cluster-size 1 --vm-size shared-cpu-1x --volume-size 1
-fly postgres attach verax-db -a verax-api
-fly secrets set VERAX_JWT_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')" VERAX_SEED=false -a verax-api
-fly deploy -a verax-api
+fly apps create verax-sonkar-api --org personal
+fly postgres create --name verax-sonkar-db --region sin --initial-cluster-size 1 --vm-size shared-cpu-1x --volume-size 1
+fly postgres attach verax-sonkar-db -a verax-sonkar-api
+fly secrets set VERAX_JWT_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')" VERAX_SEED=false -a verax-sonkar-api
+fly deploy -a verax-sonkar-api
 ```
 
 Restore the local `demo@verax.app` database (never commit the dump):
 
 ```bash
 pg_dump -h 127.0.0.1 -d verax -Fc --no-owner --no-acl -f /tmp/verax.dump
-fly proxy 15432:5432 -a verax-db
+fly proxy 15432:5432 -a verax-sonkar-db
 # other terminal:
 pg_restore -h 127.0.0.1 -p 15432 --no-owner --no-acl --clean --if-exists -d verax /tmp/verax.dump
 ```
 
-Then `vercel` from the repo root (project `verax`, production). Connect the GitHub repo so every push to `main` ships a new PWA. If the Fly hostname is not `verax-api.fly.dev`, change the rewrite in `vercel.json`.
+Then `vercel` from the repo root (project `verax`, production). Connect the GitHub repo so every push to `main` ships a new PWA. If the Fly hostname is not `verax-sonkar-api.fly.dev`, change the rewrite in `vercel.json`.
 
 ### iPhone
 
