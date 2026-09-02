@@ -319,11 +319,41 @@ export type AuthProviders = {
 export type Holding = {
   id: string
   name: string
+  ticker?: string
+  exchange?: string
   kind: string
+  quantity?: number
+  avgBuy?: number
   amount: number
+  buyValue?: number
+  currentValue?: number
+  currentValueInr?: number
+  sliceValueInr?: number
+  weight?: number
+  pnl?: number
+  pnlPct?: number
   currency: string
   notes?: string
   asOf?: string
+  quote?: MarketQuote | null
+}
+
+export type MarketQuote = {
+  name: string
+  ticker: string
+  exchange?: string
+  symbol: string
+  ltp: number
+  dayChange?: number
+  dayChangePct?: number
+  lastClose?: number
+  marketCap?: number
+  marketCapLabel?: string
+  peRatio?: number
+  volume?: number
+  volumeLabel?: string
+  currency: string
+  source: string
 }
 
 export type BudgetLine = {
@@ -341,4 +371,448 @@ export type Budget = {
   notes?: string
   holdingsTotal: number
   lines: BudgetLine[]
+}
+
+export type BudgetKind = 'EXPENSE' | 'INCOME' | 'BUFFER' | 'GOAL'
+
+export type WorkbookItem = {
+  id: string
+  category: string
+  name: string
+  kind: BudgetKind | string
+  sortOrder: number
+  amounts: Record<string, number | null>
+}
+
+export type MonthTotal = {
+  expenses: number
+  income: number
+  balance: number
+  running: number
+}
+
+export type Workbook = {
+  months: string[]
+  items: WorkbookItem[]
+  totals: Record<string, MonthTotal>
+}
+
+export type Macros = {
+  kcal: number
+  protein: number
+  carbs: number
+  fat: number
+}
+
+export type FoodServing = {
+  label: string
+  amount: number
+  unit: string
+}
+
+export type FoodHit = {
+  id: string
+  source: string
+  name: string
+  brand?: string
+  kcal: number
+  protein: number
+  carbs: number
+  fat: number
+  per: string
+  servings?: FoodServing[]
+}
+
+export type FoodLine = {
+  id: string
+  name: string
+  externalId?: string
+  source?: string
+  grams: number
+  unit?: string
+  kcal: number
+  protein: number
+  carbs: number
+  fat: number
+}
+
+export type Recipe = {
+  id: string
+  name: string
+  servings: number
+  totals: Macros
+  items: FoodLine[]
+}
+
+export type FuelSupplement = {
+  id: string
+  name: string
+  dose?: string | null
+  timing?: string | null
+  notes?: string | null
+  sortOrder: number
+  servings: number
+}
+
+export type Meal = {
+  id: string
+  date: string
+  slot: string
+  recipeId?: string
+  name: string
+  totals: Macros
+  items: FoodLine[]
+}
+
+export type DayMeals = {
+  date: string
+  totals: Macros
+  meals: Meal[]
+  waterMl?: number
+  energy?: {
+    tdee?: number
+    consumed: number
+    burned: number
+    remaining?: number
+    burns: { name: string; source: string; kcal: number }[]
+  }
+}
+
+export type MealSummary = {
+  points: { period: string; totals: Macros }[]
+  totals: Macros
+}
+
+export type RoutineTask = {
+  id: string
+  name: string
+  weekdays: number[]
+}
+
+export type RoutineBlock = {
+  id: string
+  title: string
+  startMin: number
+  endMin: number
+  color: string
+  weekdays: number[]
+  tasks: RoutineTask[]
+}
+
+export type RoutineDay = {
+  weekday: number
+  blocks: RoutineBlock[]
+}
+
+export type RoutineWeek = {
+  days: RoutineDay[]
+}
+
+export type GoogleCalendarStatus = {
+  configured: boolean
+  connected: boolean
+  email?: string
+  lastSyncedAt?: string
+  lastError?: string
+}
+
+export type GoogleCalendarEvent = {
+  id: string
+  title: string
+  date: string
+  weekday: number
+  startMin: number
+  endMin: number
+}
+
+export type PlannedSet = {
+  reps?: number
+  kg?: number
+  seconds?: number
+}
+
+export type ExerciseHit = {
+  name: string
+  type: string
+  muscle: string
+  mappedMuscle: string
+  track: string
+  difficulty: string
+  instructions: string
+  safetyInfo: string
+  equipment: string[]
+  catalogId?: string
+  img?: string
+  gif?: string
+}
+
+export type TrainExercise = {
+  id?: string
+  name: string
+  muscle: string
+  track: string
+  sets: PlannedSet[]
+}
+
+export type TrainTemplate = {
+  id: string
+  name: string
+  kind: string
+  exercises: TrainExercise[]
+}
+
+export type TrainSet = {
+  id: string
+  exerciseName: string
+  muscle: string
+  track: string
+  setIndex: number
+  reps?: number
+  kg?: number
+  seconds?: number
+}
+
+export type TrainSession = {
+  id: string
+  templateId?: string
+  name: string
+  kind: string
+  startedAt: string
+  endedAt?: string
+  source: string
+  durationSec: number
+  volume: number
+  photoUrl?: string
+  sets: TrainSet[]
+}
+
+export type TrainSessionReport = {
+  session: TrainSession
+  previous?: TrainSession
+  volume: number
+  durationSec: number
+  volumeDelta?: number
+  durationDelta?: number
+  exercises: {
+    name: string
+    muscle: string
+    volume: number
+    previousVolume?: number
+    bestKg?: number
+    previousBestKg?: number
+    improved: boolean
+  }[]
+  radar: { muscle: string; volume: number; sessions: number }[]
+  photoUrl?: string
+}
+
+export type BodyProfile = {
+  heightCm?: number
+  sex?: string
+  birthYear?: number
+  activity: string
+  age?: number
+  weightKg?: number
+  bmi?: number
+  bmr?: number
+  tdee?: number
+}
+
+export type BodyLog = {
+  id?: string
+  date: string
+  source: string
+  kind?: string
+  weightKg?: number
+  heightCm?: number
+  bmi?: number
+  bodyFatPct?: number
+  fatFreeKg?: number
+  subcutaneousFatPct?: number
+  visceralFat?: number
+  bodyWaterPct?: number
+  skeletalMusclePct?: number
+  muscleMassKg?: number
+  muscleStorage?: number
+  boneMassKg?: number
+  proteinPct?: number
+  bmrKcal?: number
+  bmrComputed?: number
+  tdee?: number
+  metabolicAge?: number
+  waistCm?: number
+  chestCm?: number
+  leftBicepCm?: number
+  rightBicepCm?: number
+  hipsCm?: number
+  leftThighCm?: number
+  rightThighCm?: number
+  neckCm?: number
+  shouldersCm?: number
+  leftCalfCm?: number
+  rightCalfCm?: number
+  leftForearmCm?: number
+  rightForearmCm?: number
+  notes?: string
+}
+
+export type TrainActivity = {
+  id: string
+  name: string
+  activityType: string
+  date: string
+  durationSec?: number
+  distanceM?: number
+  calories?: number
+  avgHr?: number
+  notes?: string
+  source: string
+}
+
+export type TrainMusclePoint = { muscle: string; volume: number; sessions: number }
+
+export type TrainSummary = {
+  trends: { period: string; volume: number; durationSec: number; radar?: TrainMusclePoint[] }[]
+  radar: TrainMusclePoint[]
+  recovery: { muscle: string; lastDate: string; hoursSince: number; recoveryPct: number }[]
+  totalVolume: number
+  totalDurationSec: number
+}
+
+export type SleepNight = {
+  id: string
+  date: string
+  startTime?: string
+  endTime?: string
+  score?: number
+  awakeMin: number
+  remMin: number
+  coreMin: number
+  deepMin: number
+  totalMin: number
+  source: string
+}
+
+export type SleepSummary = {
+  nights: SleepNight[]
+  points: {
+    period: string
+    avgScore: number
+    avgTotal: number
+    avgAwake: number
+    avgRem: number
+    avgCore: number
+    avgDeep: number
+  }[]
+}
+
+export type MindTag = {
+  id: string
+  name: string
+  color: string
+  noteCount: number
+}
+
+export type MindNote = {
+  id: string
+  body: string
+  createdAt: string
+  updatedAt: string
+  tags: MindTag[]
+}
+
+export type MindJournal = {
+  tags: MindTag[]
+  notes: MindNote[]
+}
+
+export type FinanceAccount = {
+  id: string
+  name: string
+  kind: string
+  balance: number
+  currency: string
+}
+
+export type FinanceLoanPayment = {
+  id: string
+  dueDate: string
+  kind: string
+  source: string
+  emi: number
+  interest: number
+  principal: number
+  outstandingAfter: number
+}
+
+export type FinanceLoan = {
+  id: string
+  name: string
+  kind: string
+  principal: number
+  remaining: number
+  emi: number
+  rate?: number
+  tenureMonths?: number
+  nextDueDate?: string
+  termMonths?: number
+  disbursed?: number
+  currentRoi?: number
+  repaymentMode?: string
+  plan?: string
+  principalBalance?: number
+  accruedInterest?: number
+  interestAsOf?: string
+  feeRefund?: number
+  feeRefundUntil?: string
+  earlyPayoffSavings?: number
+  schedule?: { id: string; dueDate: string; amount: number }[]
+  payments?: FinanceLoanPayment[]
+  forecast?: { period: string; remaining: number }[]
+}
+
+export type TaxItem = {
+  id: string
+  taxYear: number
+  name: string
+  kind: string
+  amount: number
+}
+
+export type TaxCompare = {
+  income: number
+  oldTaxable: number
+  newTaxable: number
+  oldTax: number
+  newTax: number
+  oldCess: number
+  newCess: number
+  oldTotal: number
+  newTotal: number
+  cheaper: string
+  section80c: number
+  otherDeductions: number
+  items: TaxItem[]
+}
+
+export type Portfolio = {
+  accountsTotal: number
+  holdingsTotal: number
+  loansTotal: number
+  netWorth: number
+  monthIncome: number
+  monthExpenses: number
+  leftover: number
+  month: string
+  nodes: { id: number; name: string; side: string }[]
+  links: { source: number; target: number; value: number }[]
+}
+
+export type PriceQuote = {
+  name: string
+  symbol: string
+  price: number
+  currency: string
+  source: string
+  usd?: number
 }

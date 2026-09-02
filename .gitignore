@@ -1,41 +1,102 @@
-# Java
+# --- Secrets (keep .env.example) ---
+.env
+.env.*
+!.env.example
+!.env*.example
+.env.local
+.env.*.local
+application-local.yml
+application-local.yaml
+*.pem
+*.p12
+*.jks
+credentials.json
+secrets.json
+*.token
+
+# --- Java / Maven ---
 *.class
 *.jar
 *.war
-*.nar
 *.ear
+*.nar
 *.log
 hs_err_pid*
 replay_pid*
 target/
 .mvn/wrapper/maven-wrapper.jar
+dependency-reduced-pom.xml
+.flattened-pom.xml
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
 
-# Node
+# --- Node / Vite ---
 node_modules/
 dist/
+dist-ssr/
 .vite/
+.turbo/
+.cache/
+.parcel-cache/
+.eslintcache
+.oxlintcache
 *.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
 
-# Env / secrets
-.env
-.env.local
-.env.*.local
-application-local.yml
-!.env.example
+# --- Tests / coverage ---
+coverage/
+.nyc_output/
+htmlcov/
+test-results/
+playwright-report/
+blob-report/
+*.h2.db
+*.mv.db
 
-# IDE
+# --- App data / dumps (never commit live Postgres) ---
+uploads/
+backend/uploads/
+logs/
+dump.rdb
+*.dump
+*.backup
+ops/dumps/
+eng.traineddata
+**/eng.traineddata
+
+# --- Docker / local data ---
+data/
+postgres-data/
+
+# --- Hosting / CLI ---
+.vercel/
+.vercel
+.fly/
+.railway/
+
+# --- IDE / editors ---
 .idea/
 *.iml
 .vscode/
+.cursor/
 *.swp
+*.swo
+*~
+.history/
 
-# OS
+# --- OS ---
 .DS_Store
+.AppleDouble
+.LSOverride
 Thumbs.db
-
-# App data
-backend/uploads/
-*.h2.db
-
-# Logs
-logs/
+desktop.ini
+ehthumbs.db

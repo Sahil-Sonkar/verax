@@ -10,5 +10,7 @@ public interface HoldingRepository extends JpaRepository<Holding, UUID> {
 
     List<Holding> findByUserIdOrderByNameAsc(UUID userId);
 
+    long countByUserId(UUID userId);
+
     Optional<Holding> findByIdAndUserId(UUID id, UUID userId);
 }

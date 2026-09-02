@@ -5,6 +5,7 @@ import { pct, signedPct } from '../lib/format'
 import { scoreTone } from '../lib/colors'
 import { ConsistencyHeatmap } from '../components/Heatmap'
 import { CategoryBloom } from '../components/CategoryBloom'
+import { CategorySnacks } from '../components/CategorySnacks'
 import type { Dashboard, DayDetail, HabitItem, InsightPreview, Quote, WeeklyReview } from '../types'
 
 export function DashboardPage() {
@@ -42,17 +43,18 @@ export function DashboardPage() {
     : null
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
       {quote.data && (
-        <section className="card max-w-2xl p-6">
-          <p className="text-xl leading-snug tracking-tight">“{quote.data.text}”</p>
-          <p className="mt-3 text-sm text-[var(--muted)]">{quote.data.author}</p>
+        <section className="border-b border-[var(--line)] px-0 py-4">
+          <div className="text-sm font-semibold">Quote</div>
+          <p className="mt-2 text-[15px] leading-snug">“{quote.data.text}”</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">{quote.data.author}</p>
         </section>
       )}
 
       <section className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
         <div>
-          <h1 className="text-4xl tracking-tight md:text-5xl">Consistency</h1>
+          <h1 className="text-[28px] font-semibold">Consistency</h1>
           <p className="mt-3 max-w-[65ch] text-sm leading-relaxed text-[var(--muted)]">
             Last 30 days. One quiet day does not erase the stretch.
           </p>
@@ -77,17 +79,18 @@ export function DashboardPage() {
         <p className="text-sm text-[var(--muted)]">No category scores yet.</p>
       ) : (
         <section>
-          <h2 className="text-2xl tracking-tight">Where the stretch lives</h2>
+          <CategorySnacks categories={data.categories} />
+          <h2 className="mt-6 text-base font-semibold">Where the stretch lives</h2>
           <CategoryBloom categories={data.categories} overall={data.overallPercent} />
         </section>
       )}
 
       <section>
         <div className="mb-5 flex items-end justify-between gap-4">
-          <h2 className="text-2xl tracking-tight">How the days went</h2>
+          <h2 className="text-base font-semibold">How the days went</h2>
           <Link
             to="/today"
-            className="glass-primary shrink-0 px-4 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            className="glass-primary shrink-0 px-4 py-1.5 text-sm"
           >
             Log today
           </Link>

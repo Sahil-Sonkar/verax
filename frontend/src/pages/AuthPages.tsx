@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../lib/auth'
 import { api, ApiError } from '../lib/api'
 import { PrimaryButton } from '../components/Dialog'
+import { InstallHint } from '../components/InstallHint'
 import type { AuthProviders, AuthResponse } from '../types'
 
 declare global {
@@ -43,8 +44,8 @@ function loadScript(src: string) {
 export function LoginPage() {
   const { login, loginWithToken } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('demo@verax.app')
-  const [password, setPassword] = useState('verax-demo')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const emailRef = useRef<HTMLInputElement>(null)
@@ -97,14 +98,19 @@ export function LoginPage() {
             {error}
           </p>
         )}
-        <PrimaryButton type="submit" disabled={busy} className="w-full py-3 font-medium">
-          {busy ? 'Signing in…' : 'Enter Verax'}
+        <PrimaryButton type="submit" disabled={busy} className="w-full py-[7px] text-sm">
+          {busy ? 'Signing in…' : 'Log in'}
         </PrimaryButton>
       </form>
-      <div className="mt-6 space-y-2">
+      <div className="mt-4 flex items-center gap-4 text-xs font-semibold text-[var(--muted)]">
+        <span className="h-px flex-1 bg-[var(--line)]" />
+        OR
+        <span className="h-px flex-1 bg-[var(--line)]" />
+      </div>
+      <div className="mt-4 space-y-3">
         <button
           type="button"
-          className="glass-btn w-full py-2.5 text-sm"
+          className="w-full text-sm font-semibold text-[var(--accent)]"
           onClick={async () => {
             setError('')
             const clientId = providers.data?.googleClientId
@@ -134,7 +140,7 @@ export function LoginPage() {
         </button>
         <button
           type="button"
-          className="glass-btn w-full py-2.5 text-sm"
+          className="w-full text-sm font-semibold text-[var(--fg)]"
           onClick={async () => {
             setError('')
             const clientId = providers.data?.appleClientId
@@ -161,10 +167,10 @@ export function LoginPage() {
           Continue with Apple
         </button>
       </div>
-      <p className="mt-6 text-sm text-[var(--muted)]">
-        New here?{' '}
-        <Link to="/register" className="text-[var(--fg)] underline-offset-4 hover:underline">
-          Create an Account
+      <p className="mt-8 text-center text-sm text-[var(--muted)]">
+        Don't have an account?{' '}
+        <Link to="/register" className="font-semibold text-[var(--accent)]">
+          Sign up
         </Link>
       </p>
       <p className="mt-2 text-xs text-[var(--muted)]">Demo workspace: demo@verax.app / verax-demo</p>
@@ -223,14 +229,14 @@ export function RegisterPage() {
             {error}
           </p>
         )}
-        <PrimaryButton type="submit" disabled={busy} className="w-full py-3 font-medium">
-          {busy ? 'Creating…' : 'Create Account'}
+        <PrimaryButton type="submit" disabled={busy} className="w-full py-[7px] text-sm">
+          {busy ? 'Creating…' : 'Sign up'}
         </PrimaryButton>
       </form>
-      <p className="mt-6 text-sm text-[var(--muted)]">
-        Already have a workspace?{' '}
-        <Link to="/login" className="text-[var(--fg)] underline-offset-4 hover:underline">
-          Sign In
+      <p className="mt-8 text-center text-sm text-[var(--muted)]">
+        Have an account?{' '}
+        <Link to="/login" className="font-semibold text-[var(--accent)]">
+          Log in
         </Link>
       </p>
     </AuthFrame>
@@ -239,33 +245,23 @@ export function RegisterPage() {
 
 function AuthFrame({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="grid min-h-dvh lg:grid-cols-2">
+    <div className="relative flex min-h-dvh items-center justify-center bg-[var(--bg)] px-4 py-10">
+      <div className="grain" aria-hidden="true" />
       <a href="#auth-main" className="skip-link">
         Skip to content
       </a>
-      <div className="relative hidden flex-col justify-between overflow-hidden border-r border-[var(--line)] px-16 py-16 lg:flex">
-        <div className="pointer-events-none absolute -left-20 -top-24 size-80 rounded-full bg-[var(--violet)]/35 blur-3xl" />
-        <div className="pointer-events-none absolute right-0 bottom-0 size-72 rounded-full bg-[var(--sky)]/28 blur-3xl" />
-        <div className="wordmark relative text-6xl font-medium tracking-tight" translate="no">
-          Verax
-        </div>
-        <p className="max-w-sm text-3xl leading-snug tracking-tight">
-          Am I consistently becoming the person I want to become?
-        </p>
-        <p className="max-w-sm text-sm leading-relaxed text-[var(--muted)]">
-          Plan, do, track, analyze, improve.
-        </p>
-      </div>
-      <div id="auth-main" className="relative flex items-center px-6 py-16">
-        <div className="pointer-events-none absolute -right-16 top-10 size-72 rounded-full bg-[var(--sky)]/20 blur-3xl" />
-        <div className="glass relative mx-auto w-full max-w-md p-8">
-          <div className="wordmark mb-10 text-4xl font-medium tracking-tight lg:hidden" translate="no">
+      <div id="auth-main" className="relative w-full max-w-[380px]">
+        <InstallHint />
+      <div className="panel">
+        <div className="card px-10 py-12">
+          <div className="wordmark mb-8 text-center text-5xl leading-none" translate="no">
             Verax
           </div>
-          <h1 className="text-4xl tracking-tight">{title}</h1>
-          <p className="mt-2 mb-8 max-w-[65ch] text-[var(--muted)]">{subtitle}</p>
+          <h1 className="sr-only">{title}</h1>
+          <p className="mb-6 text-center text-sm font-medium tracking-wide text-[var(--muted)]">{subtitle}</p>
           {children}
         </div>
+      </div>
       </div>
     </div>
   )

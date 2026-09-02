@@ -2,13 +2,16 @@ verax:
   app-name: Verax
   jwt:
     secret: ${VERAX_JWT_SECRET:change-me-in-production-use-a-long-random-string-at-least-256-bits-long!!}
-    ttl: 7d
+    ttl: ${VERAX_JWT_TTL:30d}
   seed: ${VERAX_SEED:true}
   upload-dir: ${VERAX_UPLOAD_DIR:./uploads}
   streak-threshold: 0.5
   oauth:
     google-client-id: ${GOOGLE_CLIENT_ID:}
+    google-client-secret: ${GOOGLE_CLIENT_SECRET:}
     apple-client-id: ${APPLE_CLIENT_ID:}
+  usda-api-key: ${USDA_API_KEY:DEMO_KEY}
+  ninjas-api-key: ${NINJAS_API_KEY:}
 
 spring:
   application:

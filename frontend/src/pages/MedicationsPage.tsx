@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { Dialog, PrimaryButton } from '../components/Dialog'
+import { AddButton, TrashButton } from '../components/IconButtons'
 import { api } from '../lib/api'
 import type { Medication } from '../types'
 
@@ -159,19 +160,14 @@ function MedicationForm({
                   }}
                 />
                 {times.length > 1 && (
-                  <button
-                    type="button"
-                    className="text-sm text-[var(--muted)]"
+                  <TrashButton
+                    label="Delete time"
                     onClick={() => setTimes(times.filter((_, i) => i !== index))}
-                  >
-                    Remove
-                  </button>
+                  />
                 )}
               </div>
             ))}
-            <button type="button" className="text-sm text-[var(--accent)]" onClick={() => setTimes([...times, '21:00'])}>
-              Add time
-            </button>
+            <AddButton label="Add time" onClick={() => setTimes([...times, '21:00'])} />
           </div>
         </div>
         <div>

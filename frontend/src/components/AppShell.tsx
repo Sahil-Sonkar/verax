@@ -1,131 +1,130 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import {
-  BarChart3,
-  CalendarCheck,
-  Flag,
-  LayoutDashboard,
-  NotebookPen,
-  Pill,
-  Settings,
-  Sparkles,
-  Compass,
-  UserRound,
-  Wallet,
-} from 'lucide-react'
+import { Brain, Clock3, Dumbbell, Flame, Home, Settings, Wallet } from 'lucide'
 import { clsx } from 'clsx'
 import { useAuth } from '../lib/auth'
+import { Glyph } from './Glyph'
+import { InstallHint } from './InstallHint'
 
 const desktop = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/today', label: 'Today', icon: CalendarCheck },
-  { to: '/goals', label: 'Goals', icon: Flag },
-  { to: '/habits', label: 'Habits', icon: Sparkles },
-  { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/transformation', label: 'Transformation', icon: Compass },
-  { to: '/journal', label: 'Journal', icon: NotebookPen },
-  { to: '/invest', label: 'Invest', icon: Wallet },
-  { to: '/meds', label: 'Medicines', icon: Pill },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/', label: 'Home', icon: Home },
+  { to: '/routine', label: 'Routine', icon: Clock3 },
+  { to: '/fuel', label: 'Fuel', icon: Flame },
+  { to: '/train', label: 'Train', icon: Dumbbell },
+  { to: '/finance', label: 'Finance', icon: Wallet },
+  { to: '/mind', label: 'Mind', icon: Brain },
+  { to: '/settings', label: 'Profile', icon: Settings },
 ]
 
 const mobile = [
-  { to: '/', label: 'Home', icon: LayoutDashboard },
-  { to: '/today', label: 'Today', icon: CalendarCheck },
-  { to: '/invest', label: 'Invest', icon: Wallet },
-  { to: '/goals', label: 'Goals', icon: Flag },
-  { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/settings', label: 'Profile', icon: UserRound },
+  { to: '/routine', label: 'Routine', icon: Clock3 },
+  { to: '/fuel', label: 'Fuel', icon: Flame },
+  { to: '/train', label: 'Train', icon: Dumbbell },
+  { to: '/finance', label: 'Finance', icon: Wallet },
+  { to: '/mind', label: 'Mind', icon: Brain },
 ]
 
-const glows: Record<string, { a: string; b: string }> = {
-  '/': { a: 'var(--violet)', b: 'var(--sky)' },
-  '/today': { a: 'var(--brass)', b: 'var(--sky)' },
-  '/goals': { a: 'var(--sky)', b: 'var(--violet)' },
-  '/habits': { a: 'var(--violet)', b: 'var(--brass)' },
-  '/analytics': { a: 'var(--sky)', b: 'var(--brass)' },
-  '/transformation': { a: 'var(--violet)', b: 'var(--sky)' },
-  '/journal': { a: 'var(--violet)', b: 'var(--sky)' },
-  '/invest': { a: 'var(--brass)', b: 'var(--sky)' },
-  '/meds': { a: 'var(--sky)', b: 'var(--violet)' },
-  '/settings': { a: 'var(--brass)', b: 'var(--violet)' },
+function initials(name?: string) {
+  const parts = (name ?? 'V').trim().split(/\s+/)
+  return ((parts[0]?.[0] ?? 'V') + (parts[1]?.[0] ?? '')).toUpperCase()
 }
 
 export function AppShell() {
   const { user } = useAuth()
   const location = useLocation()
-  const glow = glows[location.pathname] ?? glows['/']
+  const title = desktop.find((d) => d.to === location.pathname)?.label ?? 'Verax'
+  const fullBleed = location.pathname === '/fuel'
 
   return (
-    <div className="min-h-dvh text-[var(--fg)]">
-      <div className="page-glow" style={{ ['--glow-a' as string]: glow.a, ['--glow-b' as string]: glow.b }} />
+    <div className="min-h-dvh bg-[var(--bg)] text-[var(--fg)]">
+      <div className="grain" aria-hidden="true" />
       <a href="#main" className="skip-link">
         Skip to content
       </a>
-      <aside className="nav-glass fixed z-[20] hidden w-60 lg:flex lg:flex-col">
-        <div className="px-6 py-7">
-          <div className="wordmark text-3xl font-medium tracking-tight" translate="no">
+      <aside className="nav-glass fixed z-[20] hidden w-[244px] lg:flex lg:flex-col">
+        <div className="px-6 pb-6 pt-8">
+          <div className="wordmark text-[42px] leading-none" translate="no">
             Verax
           </div>
         </div>
-        <nav className="flex-1 space-y-0.5 px-3" aria-label="Primary">
+        <nav className="flex-1 space-y-1 px-3" aria-label="Primary">
           {desktop.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/'}
-              className={({ isActive }) =>
-                clsx(
-                  'nav-item flex items-center gap-3 px-3 py-2 text-sm',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
-                  isActive ? 'text-[var(--fg)]' : 'text-[var(--muted)] hover:text-[var(--fg)]',
-                )
-              }
+              className="nav-item flex items-center gap-4 px-3 py-3 text-base text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             >
               {({ isActive }) => (
                 <>
-                  <item.icon size={16} strokeWidth={1.5} aria-hidden="true" style={{ color: isActive ? 'var(--accent)' : undefined }} />
-                  {item.label}
+                  <Glyph icon={item.icon} size={24} strokeWidth={isActive ? 2 : 1.5} />
+                  <span className={isActive ? 'font-semibold' : 'font-normal'}>{item.label}</span>
                 </>
               )}
             </NavLink>
           ))}
         </nav>
-        <div className="px-6 py-5 text-sm text-[var(--muted)]">{user?.name}</div>
+        <div className="flex items-center gap-3 px-6 py-6 text-sm">
+          <span className="grid size-8 place-items-center rounded-[9px] bg-[var(--surface-2)] text-xs font-semibold">
+            {initials(user?.name)}
+          </span>
+          {user?.name}
+        </div>
       </aside>
 
-      <div className="lg:pl-[17rem]">
-        <header className="nav-compact sticky top-3 z-[20] mx-3 flex items-center justify-between px-5 py-3 lg:hidden">
-          <div>
-            <div className="text-sm font-medium tracking-tight" translate="no">
+      <div className="lg:pl-[244px]">
+        {!fullBleed && (
+          <header className="nav-compact sticky top-0 z-[20] flex min-h-14 items-center justify-between px-4 lg:hidden">
+            <div className="wordmark text-[32px] leading-none" translate="no">
               Verax
             </div>
-            <div className="text-sm text-[var(--muted)]">
-              {desktop.find((d) => d.to === location.pathname)?.label ?? 'Command center'}
-            </div>
-          </div>
-        </header>
-        <main id="main" className="mx-auto max-w-6xl px-5 pb-32 pt-6 lg:pb-12 lg:pt-10">
+            <div className="text-sm font-semibold">{title === 'Home' ? '' : title}</div>
+          </header>
+        )}
+        <main
+          id="main"
+          className={
+            fullBleed
+              ? 'min-h-dvh p-0'
+              : 'px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-4 lg:px-8 lg:pb-12 lg:pt-8'
+          }
+        >
+          <InstallHint />
           <Outlet />
         </main>
       </div>
 
       <nav className="tab-glass fixed z-[20] lg:hidden" aria-label="Primary">
-        <div className="grid grid-cols-6 px-1 py-1.5">
+        <div className="grid grid-cols-6">
           {mobile.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/'}
-              className="flex min-h-11 min-w-0 flex-col items-center gap-1 rounded-2xl px-0.5 py-2.5 text-[10px] tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-              style={({ isActive }) => ({
-                color: isActive ? 'var(--fg)' : 'var(--muted)',
-                background: isActive ? 'color-mix(in srgb, var(--fg) 12%, transparent)' : 'transparent',
-              })}
+              aria-label={item.label}
+              className="flex h-12 items-center justify-center text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             >
-              <item.icon size={18} strokeWidth={1.5} aria-hidden="true" />
-              <span className="max-w-full truncate">{item.label}</span>
+              {({ isActive }) => (
+                <Glyph icon={item.icon} size={24} strokeWidth={isActive ? 2 : 1.5} />
+              )}
             </NavLink>
           ))}
+          <NavLink
+            to="/settings"
+            aria-label="Profile"
+            className="flex h-12 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          >
+            {({ isActive }) => (
+              <span
+                className={clsx(
+                  'grid size-6 place-items-center rounded-[7px] text-[10px] font-semibold',
+                  isActive ? 'ring-2 ring-[var(--fg)] ring-offset-1 ring-offset-[var(--bg)]' : 'bg-[var(--surface-2)]',
+                )}
+                style={isActive ? { background: 'var(--surface-2)' } : undefined}
+              >
+                {initials(user?.name)}
+              </span>
+            )}
+          </NavLink>
         </div>
       </nav>
     </div>

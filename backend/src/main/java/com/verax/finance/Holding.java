@@ -35,6 +35,18 @@ public class Holding {
     @Column(nullable = false, length = 32)
     private String kind = "OTHER";
 
+    @Column(length = 40)
+    private String ticker;
+
+    @Column(length = 16)
+    private String exchange;
+
+    @Column(nullable = false)
+    private BigDecimal quantity = BigDecimal.ZERO;
+
+    @Column(name = "avg_buy", nullable = false)
+    private BigDecimal avgBuy = BigDecimal.ZERO;
+
     @Column(nullable = false)
     private BigDecimal amount = BigDecimal.ZERO;
 
@@ -84,6 +96,38 @@ public class Holding {
 
     public void setKind(String kind) {
         this.kind = kind;
+    }
+
+    public String getTicker() {
+        return ticker;
+    }
+
+    public void setTicker(String ticker) {
+        this.ticker = ticker;
+    }
+
+    public String getExchange() {
+        return exchange;
+    }
+
+    public void setExchange(String exchange) {
+        this.exchange = exchange;
+    }
+
+    public BigDecimal getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(BigDecimal quantity) {
+        this.quantity = quantity;
+    }
+
+    public BigDecimal getAvgBuy() {
+        return avgBuy;
+    }
+
+    public void setAvgBuy(BigDecimal avgBuy) {
+        this.avgBuy = avgBuy;
     }
 
     public BigDecimal getAmount() {

@@ -14,16 +14,16 @@ import java.util.UUID;
 public class CategoryService {
 
     public static final List<DefaultCategory> DEFAULTS = List.of(
-            new DefaultCategory("fitness", "Body", "#3dffb0", "body", 0),
-            new DefaultCategory("career", "Career", "#4cc9f0", "career", 1),
-            new DefaultCategory("content", "Content", "#ff5fb2", "brand", 2),
-            new DefaultCategory("appearance", "Appearance", "#ffd43b", "appearance", 3),
-            new DefaultCategory("learning", "Learning", "#c77dff", "growth", 4),
-            new DefaultCategory("personal", "Personal", "#ff8c42", "personal", 5),
-            new DefaultCategory("finance", "Finance", "#2eeac5", "finance", 6),
-            new DefaultCategory("health", "Health", "#7dfe6a", "health", 7),
-            new DefaultCategory("relationships", "Relationships", "#ff6b8a", "relationships", 8),
-            new DefaultCategory("other", "Other", "#9bb7ff", "other", 9)
+            new DefaultCategory("fitness", "Body", "#f77737", "body", 0),
+            new DefaultCategory("career", "Career", "#0095f6", "career", 1),
+            new DefaultCategory("content", "Content", "#e1306c", "brand", 2),
+            new DefaultCategory("appearance", "Appearance", "#fcaf45", "appearance", 3),
+            new DefaultCategory("learning", "Learning", "#833ab4", "growth", 4),
+            new DefaultCategory("personal", "Personal", "#f9ce34", "personal", 5),
+            new DefaultCategory("finance", "Finance", "#405de6", "finance", 6),
+            new DefaultCategory("health", "Health", "#ed4956", "health", 7),
+            new DefaultCategory("relationships", "Relationships", "#c13584", "relationships", 8),
+            new DefaultCategory("other", "Other", "#5b51d8", "other", 9)
     );
 
     private final CategoryRepository categories;

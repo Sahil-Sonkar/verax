@@ -5,13 +5,18 @@ import { AuthProvider, useAuth } from './lib/auth'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { LoginPage, RegisterPage } from './pages/AuthPages'
 import { DashboardPage } from './pages/DashboardPage'
+import { FinancePage } from './pages/FinancePage'
 import { GoalsPage } from './pages/GoalsPage'
 import { HabitsPage } from './pages/HabitsPage'
+import { HomePage } from './pages/HomePage'
 import { JournalPage } from './pages/JournalPage'
 import { MedicationsPage } from './pages/MedicationsPage'
-import { InvestmentsPage } from './pages/InvestmentsPage'
+import { MindPage } from './pages/MindPage'
+import { FuelPage } from './pages/RecipePage'
+import { RoutinePage } from './pages/RoutinePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TodayPage } from './pages/TodayPage'
+import { TrainPage } from './pages/TrainPage'
 import { TransformationPage } from './pages/TransformationPage'
 import type { ReactNode } from 'react'
 
@@ -62,14 +67,21 @@ export default function App() {
                 </Guard>
               }
             >
-              <Route path="/" element={<DashboardPage />} />
+              <Route path="/" element={<HomePage />} />
+              <Route path="/routine" element={<RoutinePage />} />
+              <Route path="/fuel" element={<FuelPage />} />
+              <Route path="/recipe" element={<Navigate to="/fuel" replace />} />
+              <Route path="/train" element={<TrainPage />} />
+              <Route path="/finance" element={<FinancePage />} />
+              <Route path="/mind" element={<MindPage />} />
               <Route path="/today" element={<TodayPage />} />
               <Route path="/goals" element={<GoalsPage />} />
               <Route path="/habits" element={<HabitsPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/transformation" element={<TransformationPage />} />
               <Route path="/journal" element={<JournalPage />} />
-              <Route path="/invest" element={<InvestmentsPage />} />
+              <Route path="/invest" element={<Navigate to="/finance" replace />} />
+              <Route path="/consistency" element={<DashboardPage />} />
               <Route path="/meds" element={<MedicationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>

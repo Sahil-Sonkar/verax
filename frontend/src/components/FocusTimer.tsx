@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import { PrimaryButton } from './Dialog'
 import type { Habit, SessionDay, SessionKind } from '../types'
 
-const PRESETS = [5, 10, 20, 30]
+const PRESETS = [5, 10, 15, 20, 30]
 
 function formatClock(total: number) {
   const minutes = Math.floor(total / 60)
@@ -12,13 +12,24 @@ function formatClock(total: number) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
-export function FocusTimer() {
+export function FocusTimer({
+  compact = false,
+  defaultKind = 'MEDITATION',
+  defaultMinutes,
+  preferHabit,
+}: {
+  compact?: boolean
+  defaultKind?: SessionKind
+  defaultMinutes?: number
+  preferHabit?: string
+}) {
   const queryClient = useQueryClient()
   const habits = useQuery({ queryKey: ['habits'], queryFn: () => api<Habit[]>('/api/habits') })
   const day = useQuery({ queryKey: ['sessions'], queryFn: () => api<SessionDay>('/api/sessions') })
-  const [kind, setKind] = useState<SessionKind>('MEDITATION')
-  const [minutes, setMinutes] = useState(10)
-  const [remaining, setRemaining] = useState(10 * 60)
+  const initial = defaultMinutes ?? (defaultKind === 'MEDITATION' ? 10 : 20)
+  const [kind, setKind] = useState<SessionKind>(defaultKind)
+  const [minutes, setMinutes] = useState(initial)
+  const [remaining, setRemaining] = useState(initial * 60)
   const [running, setRunning] = useState(false)
   const [habitId, setHabitId] = useState('')
   const [error, setError] = useState('')
@@ -30,6 +41,12 @@ export function FocusTimer() {
   kindRef.current = kind
   const habitIdRef = useRef(habitId)
   habitIdRef.current = habitId
+
+  useEffect(() => {
+    if (!preferHabit || habitId || !habits.data) return
+    const match = habits.data.find((habit) => habit.name.toLowerCase().includes(preferHabit.toLowerCase()))
+    if (match) setHabitId(match.id)
+  }, [preferHabit, habitId, habits.data])
 
   const save = useMutation({
     mutationFn: (seconds: number) =>
@@ -80,11 +97,16 @@ export function FocusTimer() {
     kind === 'MEDITATION' ? (day.data?.meditationSeconds ?? 0) : (day.data?.readingSeconds ?? 0)
 
   return (
-    <section className="mt-10">
-      <h2 className="text-sm font-medium">Focus</h2>
-      <p className="mt-1 text-sm text-[var(--muted)]">
-        Sit the timer. When it ends, minutes land on the matching metric and any linked habit.
-      </p>
+    <section className={compact ? 'mt-4' : 'mt-10'}>
+      {!compact && (
+        <>
+          <h2 className="text-sm font-medium">Focus</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Sit the timer. When it ends, minutes land on the matching metric and any linked habit.
+          </p>
+        </>
+      )}
+      {!compact && (
       <div className="segmented mt-3">
         {(['MEDITATION', 'READING'] as const).map((option) => (
           <button
@@ -104,7 +126,8 @@ export function FocusTimer() {
           </button>
         ))}
       </div>
-      <div className="mt-6 text-5xl tracking-tight tabular">{formatClock(remaining)}</div>
+      )}
+      <div className={`${compact ? 'mt-2' : 'mt-6'} text-5xl tracking-tight tabular`}>{formatClock(remaining)}</div>
       <div className="segmented mt-3">
         {PRESETS.map((preset) => (
           <button

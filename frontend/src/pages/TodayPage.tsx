@@ -1,32 +1,79 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { FocusTimer } from '../components/FocusTimer'
+import { ClockBlock } from '../components/ClockBlock'
 import { HabitRow } from '../components/HabitRow'
 import { api } from '../lib/api'
+import { useAuth } from '../lib/auth'
+import {
+  blockState,
+  blocksForDay,
+  energyForIsoWeekday,
+  liftWeek,
+  parseHm,
+  zonedNow,
+} from '../lib/clock'
 import { scoreTone } from '../lib/colors'
-import type { CompletionStatus, DaySnapshot, DoseStatus, FrequencyType, HabitItem, MedicationToday } from '../types'
+import type { CompletionStatus, DaySnapshot, DoseStatus, HabitItem, MedicationToday } from '../types'
 
-type Cadence = 'daily' | 'weekly' | 'monthly'
-
-function cadenceOf(freq: FrequencyType): Cadence {
-  if (freq === 'WEEKLY' || freq === 'WEEKDAYS') return 'weekly'
-  if (freq === 'MONTHLY') return 'monthly'
-  return 'daily'
+function flatten(day: DaySnapshot) {
+  const rows: HabitItem[] = []
+  for (const list of [day.nonNegotiables, day.growth, day.other]) {
+    for (const item of list) {
+      rows.push(item)
+      for (const child of item.children ?? []) rows.push(child)
+    }
+  }
+  return rows
 }
 
-function filterCadence(items: HabitItem[], cadence: Cadence) {
-  return items.filter((item) => cadenceOf(item.habit.frequencyType) === cadence)
+function matchItem(pool: HabitItem[], used: Set<string>, needles: string[]) {
+  const lower = needles.map((n) => n.toLowerCase())
+  return pool.find((item) => {
+    if (used.has(item.habit.id) || !item.due) return false
+    const name = item.habit.name.toLowerCase()
+    return lower.some((n) => name.includes(n))
+  })
+}
+
+function doseMinutes(time?: string) {
+  if (!time) return null
+  const match = time.match(/(\d{1,2}):(\d{2})/)
+  if (!match) return null
+  return Number(match[1]) * 60 + Number(match[2])
+}
+
+function lastSundayOfMonth(year: number, month: number, day: number, iso: number) {
+  if (iso !== 7) return false
+  const last = new Date(year, month, 0).getDate()
+  return day + 7 > last
+}
+
+function loadLocal(dateKey: string): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(`verax.clock.${dateKey}`) ?? '{}') as Record<string, boolean>
+  } catch {
+    return {}
+  }
 }
 
 export function TodayPage() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
-  const [cadence, setCadence] = useState<Cadence>('daily')
+  const tz = user?.timezone || 'Asia/Kolkata'
+  const [now, setNow] = useState(() => zonedNow(tz))
+  const [localDone, setLocalDone] = useState(() => loadLocal(zonedNow(tz).dateKey))
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(zonedNow(tz)), 30_000)
+    return () => window.clearInterval(id)
+  }, [tz])
+
   const today = useQuery({ queryKey: ['today'], queryFn: () => api<DaySnapshot>('/api/days/today') })
   const meds = useQuery({
     queryKey: ['medications', 'today'],
     queryFn: () => api<MedicationToday>('/api/medications/today'),
   })
+
   const mutation = useMutation({
     mutationFn: ({ habitId, status, value }: { habitId: string; status: CompletionStatus; value?: number }) =>
       api<DaySnapshot>(`/api/days/${today.data?.date}/habits/${habitId}`, {
@@ -44,93 +91,101 @@ export function TodayPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['medications'] }),
   })
 
-  if (today.isLoading) return <div className="skeleton mx-auto h-40 max-w-2xl" aria-busy="true" aria-label="Loading today" />
+  const blocks = useMemo(
+    () =>
+      blocksForDay({
+        isoWeekday: now.isoWeekday,
+        liftWeek: liftWeek(now.year, now.month, now.day),
+        isFirstOfMonth: now.day === 1,
+        isLastSunday: lastSundayOfMonth(now.year, now.month, now.day, now.isoWeekday),
+      }),
+    [now],
+  )
+
+  const energy = energyForIsoWeekday(now.isoWeekday)
+  const sleepFirst = now.minutes >= parseHm('21:30')
+  const pool = today.data ? flatten(today.data) : []
+  const water = pool.find((item) => /water/i.test(item.habit.name) && (item.habit.unit ?? '').toLowerCase().includes('l'))
+  const used = new Set<string>()
+  if (water) used.add(water.habit.id)
+
+  const states = blocks.map((block) => blockState(block, now.minutes, blocks))
+  const clockLabel = `${String(now.hour).padStart(2, '0')}:${String(now.minute).padStart(2, '0')}`
+
+  if (today.isLoading) return <div className="skeleton h-40" aria-busy="true" aria-label="Loading today" />
   if (!today.data) return <p>Could not load today.</p>
   const day = today.data
-  const date = new Date(day.date + 'T00:00:00')
   const tone = scoreTone(day.percent)
+  const date = new Date(day.date + 'T00:00:00')
+
+  function toggleLocal(id: string) {
+    setLocalDone((current) => {
+      const next = { ...current, [id]: !current[id] }
+      localStorage.setItem(`verax.clock.${now.dateKey}`, JSON.stringify(next))
+      return next
+    })
+  }
 
   return (
-    <div className="mx-auto max-w-2xl pb-8">
-      <h1 className="text-4xl tracking-tight">
-        {new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(date)}
-      </h1>
-      <p className="mt-2 max-w-[65ch] text-[var(--muted)]">Check in under a minute. Leave the rest of the day to the work.</p>
-
-      <div className="segmented mt-6" role="tablist" aria-label="Cadence">
-        {(['daily', 'weekly', 'monthly'] as const).map((option) => (
-          <button
-            key={option}
-            type="button"
-            role="tab"
-            className="chip capitalize"
-            aria-selected={cadence === option}
-            aria-pressed={cadence === option}
-            onClick={() => setCadence(option)}
-          >
-            {option}
-          </button>
-        ))}
+    <div className="pb-28">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold tracking-wide text-[var(--muted)]">
+            {energy}
+            {sleepFirst ? ' · Sleep first' : ''}
+          </p>
+          <h1 className="text-4xl tracking-tight">
+            {new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(date)}
+          </h1>
+        </div>
+        <div className="text-3xl tabular tracking-tight">{clockLabel}</div>
       </div>
+      <p className="mt-2 max-w-[65ch] text-sm text-[var(--muted)]">
+        {now.isoWeekday === 4
+          ? 'Thursday 06:20 is Voice plan, not training. Deep work still starts at 09:40.'
+          : 'Do the Now card. Protocols sit one tap behind.'}
+      </p>
 
-      {cadence === 'daily' && (
-        <>
-          <section className="mt-10">
-            <div className="flex items-end justify-between gap-3">
-              <h2 className="text-sm font-medium">Medicines</h2>
-              <Link
-                to="/meds"
-                className="text-sm text-[var(--accent)] hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-              >
-                Manage
-              </Link>
-            </div>
-            {meds.data?.doses.length === 0 && (
-              <p className="mt-2 text-sm text-[var(--muted)]">Nothing scheduled. Add a course from Medicines if you take any.</p>
-            )}
-            <div className="mt-2 divide-y divide-[var(--line)]">
-              {meds.data?.doses.map((row) => (
-                <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                  <div>
-                    <div>
-                      {row.name}
-                      {row.dosage ? ` · ${row.dosage}` : ''}
-                    </div>
-                    <div className="text-xs text-[var(--muted)]">
-                      {row.scheduledTime} · {row.status.toLowerCase()}
-                    </div>
-                  </div>
-                  {row.status === 'PENDING' || row.status === 'MISSED' ? (
-                    <div className="flex gap-2 text-sm">
-                      <button type="button" className="text-[var(--accent)] hover:opacity-80" onClick={() => dose.mutate({ id: row.id, status: 'TAKEN' })}>
-                        Taken
-                      </button>
-                      <button type="button" className="text-[var(--muted)] hover:text-[var(--fg)]" onClick={() => dose.mutate({ id: row.id, status: 'SKIPPED' })}>
-                        Skip
-                      </button>
-                    </div>
-                  ) : (
-                    <button type="button" className="text-sm text-[var(--muted)] hover:text-[var(--fg)]" onClick={() => dose.mutate({ id: row.id, status: 'PENDING' })}>
-                      Undo
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-          <FocusTimer />
-        </>
+      {water && (
+        <div className="mt-6 border border-[var(--line)] px-3">
+          <HabitRow item={water} onStatus={(id, status, value) => mutation.mutate({ habitId: id, status, value })} />
+        </div>
       )}
 
-      <Section
-        title="Non-negotiables"
-        items={filterCadence(day.nonNegotiables, cadence)}
-        onStatus={(id, status, value) => mutation.mutate({ habitId: id, status, value })}
-      />
-      <Section title="Growth" items={filterCadence(day.growth, cadence)} onStatus={(id, status, value) => mutation.mutate({ habitId: id, status, value })} />
-      <Section title="Other" items={filterCadence(day.other, cadence)} onStatus={(id, status, value) => mutation.mutate({ habitId: id, status, value })} />
+      <div className="mt-4">
+        {blocks.map((block, index) => {
+          const items = block.checks.map((check) => {
+            const item = matchItem(pool, used, check.match)
+            if (item) used.add(item.habit.id)
+            return { label: check.label, item }
+          })
+          const start = parseHm(block.start)
+          const end = block.end ? parseHm(block.end) : start + 30
+          const doses = (meds.data?.doses ?? []).filter((row) => {
+            const minute = doseMinutes(row.scheduledTime)
+            if (minute == null) return false
+            if (block.id === 'sleep') return false
+            return minute >= start && minute < end
+          })
+          return (
+            <ClockBlock
+              key={block.id}
+              block={block}
+              state={states[index] ?? 'later'}
+              items={items}
+              doses={doses}
+              dateKey={day.date}
+              sleepFirst={sleepFirst}
+              localDone={localDone}
+              onLocalDone={toggleLocal}
+              onStatus={(id, status, value) => mutation.mutate({ habitId: id, status, value })}
+              onDose={(id, status) => dose.mutate({ id, status })}
+            />
+          )
+        })}
+      </div>
 
-      <div className="sticky bottom-20 mt-8 border-t border-[var(--line)] bg-[color-mix(in_srgb,var(--bg)_78%,transparent)] pt-5 backdrop-blur-xl lg:bottom-6" aria-live="polite">
+      <div className="sticky bottom-16 mt-8 border-t border-[var(--line)] bg-[var(--bg)] pt-4 lg:bottom-6" aria-live="polite">
         <div className="flex items-end justify-between">
           <div>
             <div className="text-4xl tracking-tight tabular" style={{ color: tone }}>
@@ -142,27 +197,5 @@ export function TodayPage() {
         </div>
       </div>
     </div>
-  )
-}
-
-function Section({
-  title,
-  items,
-  onStatus,
-}: {
-  title: string
-  items: HabitItem[]
-  onStatus: (habitId: string, status: CompletionStatus, value?: number) => void
-}) {
-  if (items.length === 0) return null
-  return (
-    <section className="mt-10">
-      <h2 className="text-sm font-medium">{title}</h2>
-      <div className="mt-1">
-        {items.map((item) => (
-          <HabitRow key={item.habit.id} item={item} onStatus={onStatus} />
-        ))}
-      </div>
-    </section>
   )
 }

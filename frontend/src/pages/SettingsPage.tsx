@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
-import { api, getToken } from '../lib/api'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { api, ApiError, getToken } from '../lib/api'
+import { applyTheme } from '../lib/theme'
 import { formatNumber } from '../lib/format'
 import { useAuth } from '../lib/auth'
 import { PrimaryButton } from '../components/Dialog'
-import type { Habit, IntegrationCatalog, Metric, NotificationPrefs, Photo } from '../types'
+import type { GoogleCalendarStatus, Habit, IntegrationCatalog, Metric, NotificationPrefs, Photo } from '../types'
 
 export function SettingsPage() {
   const { user, logout } = useAuth()
@@ -38,8 +40,9 @@ export function SettingsPage() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-4xl tracking-tight">{user?.name}</h1>
-        <p className="text-sm text-[var(--muted)]">{user?.email}</p>
+        <p className="kicker">Account</p>
+        <h1 className="mt-2 text-5xl tracking-tight">{user?.name}</h1>
+        <p className="mt-2 text-[15px] text-[var(--muted)]">{user?.email}</p>
       </div>
 
       <section className="border-t border-[var(--line)] pt-6">
@@ -52,11 +55,7 @@ export function SettingsPage() {
               aria-pressed={theme === mode}
               onClick={() => {
                 setTheme(mode)
-                document.documentElement.classList.toggle('light', mode === 'light')
-                document.documentElement.classList.toggle('dark', mode === 'dark')
-                localStorage.setItem('verax.theme', mode)
-                const meta = document.querySelector('meta[name="theme-color"]:not([media])')
-                if (meta) meta.setAttribute('content', mode === 'light' ? '#f4f5f7' : '#0c0d10')
+                applyTheme(mode as 'light' | 'dark')
               }}
               className="chip capitalize"
             >
@@ -71,6 +70,7 @@ export function SettingsPage() {
         <p className="mt-1 max-w-[65ch] text-sm text-[var(--muted)]">
           Verax will not scrape Garmin, banks, Cult Fit, or Lyfta, and will not store those passwords. Live Google Health and Kite Connect need developer credentials. Until then, paste a number you already have. If a habit is linked to that metric, Today marks itself.
         </p>
+        <GoogleCalendarCard />
         <div className="mt-4 divide-y divide-[var(--line)] border-y border-[var(--line)]">
           {catalog.data?.providers.map((provider) => (
             <div key={provider.key} className="py-4">
@@ -196,6 +196,142 @@ export function SettingsPage() {
       >
         Sign Out
       </button>
+    </div>
+  )
+}
+
+function GoogleCalendarCard() {
+  const queryClient = useQueryClient()
+  const [params, setParams] = useSearchParams()
+  const status = useQuery({
+    queryKey: ['google-calendar'],
+    queryFn: () => api<GoogleCalendarStatus>('/api/calendar/google'),
+  })
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const consumed = useRef(false)
+
+  useEffect(() => {
+    const denied = params.get('error')
+    const code = params.get('code')
+    const oauthState = params.get('state')
+    if (denied) {
+      setError('Google Calendar access was not granted.')
+      setParams({}, { replace: true })
+      return
+    }
+    if (!code || !oauthState || consumed.current) return
+    consumed.current = true
+    setBusy(true)
+    void api<GoogleCalendarStatus>('/api/calendar/google/callback', {
+      method: 'POST',
+      body: JSON.stringify({
+        code,
+        state: oauthState,
+        redirectUri: `${window.location.origin}/settings`,
+      }),
+    })
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: ['google-calendar'] })
+        void queryClient.invalidateQueries({ queryKey: ['routine-week'] })
+        void queryClient.invalidateQueries({ queryKey: ['google-calendar-events'] })
+      })
+      .catch((err) => setError(err instanceof ApiError ? err.message : 'Could not connect Google Calendar.'))
+      .finally(() => {
+        setBusy(false)
+        setParams({}, { replace: true })
+      })
+  }, [params, queryClient, setParams])
+
+  async function connect() {
+    setBusy(true)
+    setError('')
+    try {
+      const redirectUri = `${window.location.origin}/settings`
+      const next = await api<{ url: string }>(`/api/calendar/google/auth-url?redirectUri=${encodeURIComponent(redirectUri)}`)
+      window.location.assign(next.url)
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not start Google Calendar connect.')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border border-[var(--line)] px-4 py-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="font-medium">Google Calendar</div>
+        <div className="text-xs text-[var(--muted)]">
+          {status.data?.connected ? 'Connected' : status.data?.configured ? 'Ready' : 'Needs credentials'}
+        </div>
+      </div>
+      <p className="mt-1 text-sm text-[var(--muted)]">
+        Two-way sync of routine blocks. Edits in Verax or Google move together. Other dated events show on the week grid
+        without becoming a repeating block.
+      </p>
+      {status.data?.connected && (
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          {status.data.email}
+          {status.data.lastSyncedAt ? ` · last sync ${new Date(status.data.lastSyncedAt).toLocaleString()}` : ''}
+        </p>
+      )}
+      {status.data?.lastError && <p className="mt-1 text-sm text-[var(--danger)]">{status.data.lastError}</p>}
+      {error && (
+        <p className="mt-1 text-sm text-[var(--danger)]" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {status.data?.connected ? (
+          <>
+            <PrimaryButton
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true)
+                setError('')
+                try {
+                  await api('/api/calendar/google/sync', { method: 'POST' })
+                  void queryClient.invalidateQueries({ queryKey: ['google-calendar'] })
+                  void queryClient.invalidateQueries({ queryKey: ['routine-week'] })
+                  void queryClient.invalidateQueries({ queryKey: ['google-calendar-events'] })
+                } catch (err) {
+                  setError(err instanceof ApiError ? err.message : 'Sync failed.')
+                } finally {
+                  setBusy(false)
+                }
+              }}
+            >
+              {busy ? 'Working…' : 'Sync now'}
+            </PrimaryButton>
+            <button
+              type="button"
+              className="text-sm text-[var(--danger)]"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true)
+                try {
+                  await api('/api/calendar/google', { method: 'DELETE' })
+                  void queryClient.invalidateQueries({ queryKey: ['google-calendar'] })
+                  void queryClient.invalidateQueries({ queryKey: ['google-calendar-events'] })
+                } finally {
+                  setBusy(false)
+                }
+              }}
+            >
+              Disconnect
+            </button>
+          </>
+        ) : (
+          <PrimaryButton type="button" disabled={busy || status.data?.configured === false} onClick={() => void connect()}>
+            {busy ? 'Connecting…' : 'Connect Google Calendar'}
+          </PrimaryButton>
+        )}
+      </div>
+      {status.data && !status.data.configured && (
+        <p className="mt-2 text-xs text-[var(--muted)]">
+          Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, enable the Calendar API, and add {typeof window === 'undefined' ? '/settings' : `${window.location.origin}/settings`} as an authorized redirect URI.
+        </p>
+      )}
     </div>
   )
 }

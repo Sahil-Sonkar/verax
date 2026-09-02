@@ -27,7 +27,6 @@ export function HabitRow({
   const children = item.children ?? []
   const isGroup = children.length > 0
   const accent = categoryColor(item.habit.category?.name, item.habit.category?.color)
-  const active = STATUSES.find((s) => s.value === item.status)
   const target = item.habit.targetValue ?? 3
   const current = item.value ?? 0
 
@@ -37,27 +36,27 @@ export function HabitRow({
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             {isGroup ? (
-              <span className="size-5 shrink-0 rounded-md border border-[var(--line)]" aria-hidden="true" />
+              <span
+                className="grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold text-white"
+                style={{ background: accent }}
+                aria-hidden="true"
+              >
+                {item.habit.name.slice(0, 1)}
+              </span>
             ) : (
               <button
                 type="button"
                 onClick={() => onStatus(item.habit.id, item.status === 'COMPLETED' ? 'MISSED' : 'COMPLETED')}
                 aria-pressed={item.status === 'COMPLETED'}
                 aria-label={`Mark ${item.habit.name} ${item.status === 'COMPLETED' ? 'missed' : 'done'}`}
-                className={clsx(
-                  'size-5 shrink-0 rounded-md border transition-colors duration-150',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
-                )}
+                className="grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 style={{
-                  borderColor: active?.color ?? accent,
-                  background:
-                    item.status === 'COMPLETED'
-                      ? 'var(--mint)'
-                      : item.status === 'PARTIAL'
-                        ? 'var(--brass)'
-                        : 'transparent',
+                  background: item.status === 'COMPLETED' ? 'var(--mint)' : accent,
+                  opacity: item.status === 'COMPLETED' ? 1 : 0.85,
                 }}
-              />
+              >
+                {item.habit.name.slice(0, 1)}
+              </button>
             )}
             <div className="min-w-0">
               <div className="truncate text-[15px]">{item.habit.name}</div>

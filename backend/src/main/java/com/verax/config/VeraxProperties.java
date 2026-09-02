@@ -11,6 +11,8 @@ public class VeraxProperties {
     private String uploadDir = "./uploads";
     private boolean seed = true;
     private double streakThreshold = 0.5;
+    private String usdaApiKey = "DEMO_KEY";
+    private String ninjasApiKey = "";
     private final Jwt jwt = new Jwt();
     private final Oauth oauth = new Oauth();
 
@@ -54,6 +56,22 @@ public class VeraxProperties {
         return oauth;
     }
 
+    public String getUsdaApiKey() {
+        return usdaApiKey == null || usdaApiKey.isBlank() ? "DEMO_KEY" : usdaApiKey;
+    }
+
+    public void setUsdaApiKey(String usdaApiKey) {
+        this.usdaApiKey = usdaApiKey;
+    }
+
+    public String getNinjasApiKey() {
+        return ninjasApiKey == null ? "" : ninjasApiKey.trim();
+    }
+
+    public void setNinjasApiKey(String ninjasApiKey) {
+        this.ninjasApiKey = ninjasApiKey;
+    }
+
     public static class Jwt {
         private String secret;
         private Duration ttl = Duration.ofDays(7);
@@ -77,6 +95,7 @@ public class VeraxProperties {
 
     public static class Oauth {
         private String googleClientId = "";
+        private String googleClientSecret = "";
         private String appleClientId = "";
 
         public String getGoogleClientId() {
@@ -85,6 +104,14 @@ public class VeraxProperties {
 
         public void setGoogleClientId(String googleClientId) {
             this.googleClientId = googleClientId;
+        }
+
+        public String getGoogleClientSecret() {
+            return googleClientSecret;
+        }
+
+        public void setGoogleClientSecret(String googleClientSecret) {
+            this.googleClientSecret = googleClientSecret;
         }
 
         public String getAppleClientId() {
@@ -97,6 +124,10 @@ public class VeraxProperties {
 
         public boolean googleEnabled() {
             return googleClientId != null && !googleClientId.isBlank();
+        }
+
+        public boolean googleCalendarEnabled() {
+            return googleEnabled() && googleClientSecret != null && !googleClientSecret.isBlank();
         }
 
         public boolean appleEnabled() {
