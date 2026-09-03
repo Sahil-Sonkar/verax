@@ -5,6 +5,7 @@ import com.verax.asset.AssetDtos;
 import com.verax.asset.AssetRepository;
 import com.verax.asset.AssetService;
 import com.verax.common.ApiException;
+import com.verax.habit.AutoCompleteService;
 import com.verax.user.User;
 import com.verax.user.UserRepository;
 import org.springframework.stereotype.Service;
@@ -13,9 +14,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
@@ -43,6 +46,7 @@ public class TrainService {
     private final AssetService assets;
     private final AssetRepository assetRows;
     private final UserRepository users;
+    private final AutoCompleteService autoComplete;
 
     public TrainService(
             TrainTemplateRepository templates,
@@ -53,7 +57,8 @@ public class TrainService {
             BodyLogRepository bodyLogs,
             AssetService assets,
             AssetRepository assetRows,
-            UserRepository users
+            UserRepository users,
+            AutoCompleteService autoComplete
     ) {
         this.templates = templates;
         this.sessions = sessions;
@@ -64,6 +69,7 @@ public class TrainService {
         this.assets = assets;
         this.assetRows = assetRows;
         this.users = users;
+        this.autoComplete = autoComplete;
     }
 
     @Transactional
@@ -181,6 +187,7 @@ public class TrainService {
         if (session.getEndedAt() == null) {
             session.setEndedAt(Instant.now());
         }
+        markWorkout(userId, sessionDate(userId, session.getStartedAt()), TrainDtos.sessionDurationSec(session), "Train session");
         return TrainDtos.SessionView.from(session);
     }
 
@@ -244,6 +251,9 @@ public class TrainService {
         activity.setUser(users.getReferenceById(userId));
         apply(activity, request);
         activities.save(activity);
+        if (activity.getDurationSec() != null && activity.getDurationSec() > 0) {
+            markWorkout(userId, activity.getActivityDate(), activity.getDurationSec(), "Train activity");
+        }
         return TrainDtos.ActivityView.from(activity);
     }
 
@@ -718,5 +728,18 @@ public class TrainService {
                         counts.getOrDefault(muscle, 0)
                 ))
                 .toList();
+    }
+
+    private void markWorkout(UUID userId, LocalDate date, long durationSec, String note) {
+        if (date == null || durationSec <= 0) {
+            return;
+        }
+        BigDecimal minutes = BigDecimal.valueOf(durationSec).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        autoComplete.applyNamed(userId, date, "exercise|workout", minutes, BigDecimal.valueOf(45), note);
+    }
+
+    private LocalDate sessionDate(UUID userId, Instant startedAt) {
+        User user = users.findById(userId).orElseThrow();
+        return startedAt.atZone(ZoneId.of(user.getTimezone())).toLocalDate();
     }
 }

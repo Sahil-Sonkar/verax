@@ -84,6 +84,9 @@ public class HabitService {
         if (request.icon() != null) {
             habit.setIcon(request.icon());
         }
+        if (request.tracked() != null) {
+            habit.setTracked(request.tracked());
+        }
         if (request.section() != null) {
             habit.setSection(request.section());
         }

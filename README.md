@@ -10,17 +10,18 @@ It is not a generic habit tracker. The primary metric is **consistency**, not pr
 
 Core loop: **Plan → Do → Track → Analyze → Improve**
 
-## Now building — five rooms
+## Now building
 
 Home is a hub. Analytics that cross rooms land there in the next iteration. Each room below has its own record and its own charts.
 
 | Room | Route | What it is |
 |---|---|---|
 | **Routine** | `/routine` | Minimal week clock. Seven days. Sectograph. Time blocks. Subtasks can be weekday-scoped (shampoo Mon/Wed only). |
-| **Fuel** | `/fuel` | Meals with kcal / P / C / F. USDA + Open Food Facts. Saved recipes. Daily supplements (taken / servings — not Medicines). Water. Daily + weekly + monthly charts. `/recipe` redirects here. |
-| **Train** | `/train` | Push/pull/leg days as startable routines with a live timer, sets × reps × kg (or time). Volume trend, muscle radar, recovery since last session. Swimming / running / badminton / boxing (and anything you add) as Garmin-shaped activities. |
-| **Finance** | `/finance` | Invest, Budget (the Excel workbook), Accounts, Loans, Portfolio (net worth + month flow), Tax plan (old vs new regime). |
+| **Body** | `/body` | Meals with kcal / P / C / F. USDA + Open Food Facts. Saved recipes. Daily supplements (taken / servings — not Medicines). Water. Daily + weekly + monthly charts. `/fuel` and `/recipe` redirect here. |
+| **Play** | `/play` | Push/pull/leg days as startable routines with a live timer, sets × reps × kg (or time). Volume trend, muscle radar, recovery since last session. Swimming / running / badminton / boxing (and anything you add) as Garmin-shaped activities. `/train` redirects here. |
+| **Money** | `/money` | Invest, Budget (the Excel workbook), Accounts, Loans, Portfolio (net worth + month flow), Tax plan (old vs new regime). `/finance` and `/invest` redirect here. |
 | **Mind** | `/mind` | Meditation timer, generated ambients (rain / wind / sea / static / fire), sleep stages + score with day / month / quarter / year charts. |
+| **Voice** | `/voice` | Social stats from YouTube, Instagram, LinkedIn. Content idea tracks (IDEA → happened → learned → platform → hook). |
 
 Garmin Connect is partner-only. Sleep and sport land as the same fields Garmin shows; you paste or type them. Do not scrape. Food keys stay on the API (`USDA_API_KEY`, default `DEMO_KEY`). Quotes for stocks/crypto go through the API, not the browser.
 
@@ -950,10 +951,11 @@ Joy that is not a training protocol. If it has a periodization sheet, it is Body
 | **Auth** | Email and password, plus Google and Apple when client IDs are set. JWT, 7-day expiry. |
 | **Home** (`/`) | Five room cards. Cross-room analytics next. |
 | **Routine** (`/routine`) | Week as 7 days. Sectograph + time list. Add / edit / remove blocks. Subtasks with weekday chips. |
-| **Fuel** (`/fuel`) | Food search (USDA / Open Food Facts), recipes, meal slots, supplements for the day, water, daily macros, stacked + line charts. |
-| **Train** (`/train`) | Seeded push/pull/leg + cardio templates. Session timer. Sets. Radar, volume, recovery. Garmin-shaped activity log. |
-| **Finance** (`/finance`) | Invest, Budget workbook, Accounts, Loans, Portfolio, Tax compare. `/invest` redirects here. |
+| **Body** (`/body`) | Food search (USDA / Open Food Facts), recipes, meal slots, supplements for the day, water, daily macros, stacked + line charts. |
+| **Play** (`/play`) | Seeded push/pull/leg + cardio templates. Session timer. Sets. Radar, volume, recovery. Garmin-shaped activity log. |
+| **Money** (`/money`) | Invest, Budget workbook, Accounts, Loans, Portfolio, Tax compare. `/finance` and `/invest` redirect here. |
 | **Mind** (`/mind`) | Sit timer, ambient noise, sleep stages and score. |
+| **Voice** (`/voice`) | YouTube / Instagram / LinkedIn stats import. Content idea tracks. |
 | **Dashboard** (`/consistency`) | Quote, 30-day consistency, streaks, D3 radar, heatmap, weekly review (legacy). |
 | **Today** (`/today`) | Legacy weekday clock. Unlinked from nav. |
 | **Habits** (`/habits`) | Create, edit, archive, nest. Daily, weekday, weekly, or monthly. Optional metric auto-complete. |

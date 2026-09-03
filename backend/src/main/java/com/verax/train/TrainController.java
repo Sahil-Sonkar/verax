@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/train")
+@RequestMapping({"/api/play", "/api/train"})
 public class TrainController {
 
     private final TrainService train;

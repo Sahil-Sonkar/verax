@@ -348,6 +348,8 @@ function statusLabel(status: string) {
       return 'Needs your API keys'
     case 'MANUAL':
       return 'Paste a reading'
+    case 'INGEST':
+      return 'Paste a reading'
     default:
       return status.toLowerCase().replaceAll('_', ' ')
   }
@@ -386,6 +388,10 @@ function IngestForm({ habits }: { habits: Habit[] }) {
           void queryClient.invalidateQueries({ queryKey: ['metrics'] })
           void queryClient.invalidateQueries({ queryKey: ['today'] })
           void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+          void queryClient.invalidateQueries({ queryKey: ['habit-scores'] })
+          void queryClient.invalidateQueries({ queryKey: ['habit-series'] })
+          void queryClient.invalidateQueries({ queryKey: ['heatmap'] })
+          void queryClient.invalidateQueries({ queryKey: ['compare'] })
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Could not log that reading.')
         } finally {

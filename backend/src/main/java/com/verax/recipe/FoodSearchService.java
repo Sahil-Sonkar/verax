@@ -4,6 +4,7 @@ import com.verax.config.VeraxProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -50,9 +51,16 @@ public class FoodSearchService {
     private List<RecipeDtos.FoodHit> usda(String query) {
         try {
             String key = properties.getUsdaApiKey();
-            String url = "https://api.nal.usda.gov/fdc/v1/foods/search?query="
-                    + enc(query) + "&pageSize=8&dataType=Foundation,SR%20Legacy,Survey%20(FNDDS)&api_key=" + enc(key);
-            Map<String, Object> body = http.get().uri(url).retrieve().body(MAP);
+            Map<String, Object> body = http.post()
+                    .uri("https://api.nal.usda.gov/fdc/v1/foods/search?api_key=" + enc(key))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of(
+                            "query", query,
+                            "pageSize", 8,
+                            "dataType", List.of("Foundation", "SR Legacy", "Survey (FNDDS)")
+                    ))
+                    .retrieve()
+                    .body(MAP);
             if (body == null) {
                 return List.of();
             }
@@ -89,13 +97,15 @@ public class FoodSearchService {
         BigDecimal protein = BigDecimal.ZERO;
         BigDecimal carbs = BigDecimal.ZERO;
         BigDecimal fat = BigDecimal.ZERO;
+        Map<String, BigDecimal> micros = new LinkedHashMap<>();
         if (nutrients instanceof List<?> list) {
             for (Object row : list) {
                 if (!(row instanceof Map<?, ?> nutrient)) {
                     continue;
                 }
                 Map<String, Object> n = (Map<String, Object>) nutrient;
-                String label = str(n.get("nutrientName")).toLowerCase(Locale.ROOT);
+                String nameLabel = str(n.get("nutrientName"));
+                String label = nameLabel.toLowerCase(Locale.ROOT);
                 String unit = str(n.get("unitName")).toLowerCase(Locale.ROOT);
                 BigDecimal value = decimal(n.get("value"));
                 if (label.startsWith("energy") && unit.contains("kcal")) {
@@ -107,6 +117,7 @@ public class FoodSearchService {
                 } else if (label.startsWith("total lipid")) {
                     fat = value;
                 }
+                micros.putAll(FoodNutrients.fromUsda(nameLabel, str(n.get("unitName")), value));
             }
         }
         return new RecipeDtos.FoodHit(
@@ -119,7 +130,9 @@ public class FoodSearchService {
                 carbs,
                 fat,
                 "100g",
-                servingsFromUsda(food)
+                servingsFromUsda(food),
+                micros,
+                BigDecimal.ONE
         );
     }
 
@@ -159,7 +172,9 @@ public class FoodSearchService {
                         decimal(nutriments.get("carbohydrates_100g")),
                         decimal(nutriments.get("fat_100g")),
                         "100g",
-                        servingsFromOff(map)
+                        servingsFromOff(map),
+                        FoodNutrients.fromOff(nutriments),
+                        BigDecimal.ONE
                 ));
             }
             return hits;

@@ -98,7 +98,9 @@ public class SessionService {
                 total,
                 request.kind() == SessionKind.MEDITATION ? "Meditation timer" : "Reading timer"
         ));
-        if (habit != null) {
+        if (request.kind() == SessionKind.MEDITATION) {
+            autoComplete.applyNamed(userId, date, "meditat", total, BigDecimal.valueOf(15), "Focus timer");
+        } else if (habit != null) {
             autoComplete.completeHabit(userId, habit, date, minutes, "Focus timer");
         }
         return SessionDtos.View.from(session);

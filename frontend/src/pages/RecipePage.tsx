@@ -8,9 +8,9 @@ import { MonoLine } from '../components/mono/MonoLine'
 import { Link } from 'react-router-dom'
 import { Dialog, PrimaryButton } from '../components/Dialog'
 import { AddButton, TrashButton } from '../components/IconButtons'
-import { FoodEntryDialog, FoodPicker, FoodSearch, MacroBoard, hitFromMacros, type PickedFood } from '../components/FoodPicker'
+import { FOOD_MICROS, FoodEntryDialog, FoodPicker, FoodSearch, MacroBoard, MicroList, hitFromMacros, type PickedFood } from '../components/FoodPicker'
 import { api } from '../lib/api'
-import type { DayMeals, FoodHit, FoodLine, FuelSupplement, Meal, MealSummary, Recipe } from '../types'
+import type { DayMeals, FoodHit, FoodLine, FuelSupplement, Meal, MealSummary, Recipe, UserFood } from '../types'
 
 const MEAL_SLOTS = [
   { id: 'BREAKFAST', label: 'Breakfast' },
@@ -44,6 +44,41 @@ const MEAL_COLORS: Record<string, string> = {
 }
 type DiaryTab = 'diary' | 'recipes' | 'supplements' | 'nutrition'
 type SupplementDraft = { name: string; dose: string; timing: string; notes: string }
+type UserFoodDraft = {
+  name: string
+  brand: string
+  servingAmount: string
+  servingUnit: 'g' | 'ml'
+  servings: string
+  kcal: string
+  protein: string
+  carbs: string
+  fat: string
+  micros: Record<string, string>
+}
+
+const EMPTY_USER_FOOD: UserFoodDraft = {
+  name: '',
+  brand: '',
+  servingAmount: '100',
+  servingUnit: 'g',
+  servings: '1',
+  kcal: '',
+  protein: '',
+  carbs: '',
+  fat: '',
+  micros: {},
+}
+
+function foodPortionGrams(amount?: number | string, servings?: number | string) {
+  const size = Number(amount) > 0 ? Number(amount) : 100
+  const count = Number(servings) > 0 ? Number(servings) : 1
+  return size * count
+}
+
+function per100ToPortion(value: number | undefined, grams: number) {
+  return ((value ?? 0) * grams) / 100
+}
 
 const SUPPLEMENT_TIMES = ['Morning', 'With meals', 'Night', 'Pre-workout'] as const
 const EMPTY_SUPPLEMENT: SupplementDraft = { name: '', dose: '', timing: '', notes: '' }
@@ -163,6 +198,10 @@ export function FuelPage() {
   const [grain, setGrain] = useState<'day' | 'week' | 'month'>('day')
   const [recipeOpen, setRecipeOpen] = useState(false)
   const [recipeName, setRecipeName] = useState('')
+  const [foodOpen, setFoodOpen] = useState(false)
+  const [editingFood, setEditingFood] = useState<UserFood | null>(null)
+  const [foodDraft, setFoodDraft] = useState<UserFoodDraft>(EMPTY_USER_FOOD)
+  const [foodError, setFoodError] = useState('')
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null)
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
   const [supplementOpen, setSupplementOpen] = useState(false)
@@ -182,6 +221,7 @@ export function FuelPage() {
     queryFn: () => api<DayMeals>(`/api/meals/day?date=${date}`),
   })
   const recipes = useQuery({ queryKey: ['recipes'], queryFn: () => api<Recipe[]>('/api/recipes') })
+  const userFoods = useQuery({ queryKey: ['user-foods'], queryFn: () => api<UserFood[]>('/api/foods') })
   const fuelSupplements = useQuery({
     queryKey: ['supplements', date],
     queryFn: () => api<FuelSupplement[]>(`/api/supplements?date=${date}`),
@@ -239,6 +279,8 @@ export function FuelPage() {
       body: JSON.stringify({ date, ...body }),
     })
     queryClient.setQueryData(['meals-day', date], next)
+    void queryClient.invalidateQueries({ queryKey: ['today'] })
+    void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
   }
 
   async function addRecipeTo(recipe: Recipe, slot: string) {
@@ -267,22 +309,12 @@ export function FuelPage() {
       if (item.id) {
         await api(`/api/meals/items/${item.id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ name: item.name.trim(), grams: item.grams, unit: item.unit }),
+          body: JSON.stringify(linePayload(item)),
         })
       } else {
         await api(`/api/meals/${meal.id}/items`, {
           method: 'POST',
-          body: JSON.stringify({
-            name: item.name.trim(),
-            grams: item.grams,
-            unit: item.unit,
-            externalId: item.externalId,
-            source: item.source,
-            kcal: item.kcal,
-            protein: item.protein,
-            carbs: item.carbs,
-            fat: item.fat,
-          }),
+          body: JSON.stringify(linePayload(item)),
         })
       }
     }
@@ -303,22 +335,12 @@ export function FuelPage() {
       if (item.id) {
         await api(`/api/recipes/items/${item.id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ name: item.name.trim(), grams: item.grams, unit: item.unit }),
+          body: JSON.stringify(linePayload(item)),
         })
       } else {
         await api(`/api/recipes/${recipe.id}/items`, {
           method: 'POST',
-          body: JSON.stringify({
-            name: item.name.trim(),
-            grams: item.grams,
-            unit: item.unit,
-            externalId: item.externalId,
-            source: item.source,
-            kcal: item.kcal,
-            protein: item.protein,
-            carbs: item.carbs,
-            fat: item.fat,
-          }),
+          body: JSON.stringify(linePayload(item)),
         })
       }
     }
@@ -330,6 +352,81 @@ export function FuelPage() {
     await api(`/api/recipes/${id}`, { method: 'DELETE' })
     setEditingRecipe((current) => (current?.id === id ? null : current))
     void queryClient.invalidateQueries({ queryKey: ['recipes'] })
+  }
+
+  function openNewFood() {
+    setEditingFood(null)
+    setFoodDraft(EMPTY_USER_FOOD)
+    setFoodError('')
+    setFoodOpen(true)
+  }
+
+  function openEditFood(food: UserFood) {
+    const grams = foodPortionGrams(food.servingAmount, food.servings)
+    setEditingFood(food)
+    setFoodDraft({
+      name: food.name,
+      brand: food.brand ?? '',
+      servingAmount: String(food.servingAmount ?? 100),
+      servingUnit: food.servingUnit === 'ml' ? 'ml' : 'g',
+      servings: String(food.servings ?? 1),
+      kcal: String(per100ToPortion(food.kcal, grams)),
+      protein: String(per100ToPortion(food.protein, grams)),
+      carbs: String(per100ToPortion(food.carbs, grams)),
+      fat: String(per100ToPortion(food.fat, grams)),
+      micros: Object.fromEntries(
+        FOOD_MICROS.filter((row) => food.micros?.[row.key] != null).map((row) => [
+          row.key,
+          String(per100ToPortion(food.micros![row.key], grams)),
+        ]),
+      ),
+    })
+    setFoodError('')
+    setFoodOpen(true)
+  }
+
+  async function saveUserFood() {
+    setFoodError('')
+    const micros = Object.fromEntries(
+      FOOD_MICROS.flatMap((row) => {
+        const raw = foodDraft.micros[row.key]
+        if (raw == null || raw.trim() === '') return []
+        const value = Number(raw)
+        return Number.isFinite(value) ? [[row.key, value]] : []
+      }),
+    )
+    const body = {
+      name: foodDraft.name.trim(),
+      brand: foodDraft.brand.trim() || null,
+      servingAmount: Number(foodDraft.servingAmount) || 100,
+      servingUnit: foodDraft.servingUnit,
+      servings: Number(foodDraft.servings) > 0 ? Number(foodDraft.servings) : 1,
+      kcal: Number(foodDraft.kcal) || 0,
+      protein: Number(foodDraft.protein) || 0,
+      carbs: Number(foodDraft.carbs) || 0,
+      fat: Number(foodDraft.fat) || 0,
+      micros,
+    }
+    try {
+      if (editingFood) {
+        await api(`/api/foods/${editingFood.id}`, { method: 'PATCH', body: JSON.stringify(body) })
+      } else {
+        await api('/api/foods', { method: 'POST', body: JSON.stringify(body) })
+      }
+      setFoodOpen(false)
+      setEditingFood(null)
+      setFoodDraft(EMPTY_USER_FOOD)
+      void queryClient.invalidateQueries({ queryKey: ['user-foods'] })
+    } catch (err) {
+      setFoodError(err instanceof Error ? err.message : 'Could not save that food.')
+    }
+  }
+
+  async function removeFood(id: string) {
+    await api(`/api/foods/${id}`, { method: 'DELETE' })
+    setFoodOpen(false)
+    setEditingFood(null)
+    void queryClient.invalidateQueries({ queryKey: ['user-foods'] })
   }
 
   async function refreshSupplements() {
@@ -499,7 +596,7 @@ export function FuelPage() {
               <p className="mt-2 text-[11px] text-[var(--muted)]">
                 {tdee != null
                   ? `${macro(kcalGoal)} − ${macro(food)} + ${macro(burned)} = ${macro(remaining)}`
-                  : 'Set height and weight in Train → Body to use TDEE as the goal.'}
+                  : 'Set height and weight in Play → Body to use TDEE as the goal.'}
               </p>
               {burns.length > 0 && (
                 <div className="mt-2 space-y-1 text-[11px] text-[var(--muted)]">
@@ -571,9 +668,33 @@ export function FuelPage() {
 
       {tab === 'recipes' && (
         <div className="mx-auto w-full max-w-6xl px-3 py-3">
-          <div className="mb-3 flex justify-end">
+          <div className="mb-3 flex flex-wrap justify-end gap-2">
+            <PrimaryButton onClick={openNewFood}>Create a food</PrimaryButton>
             <PrimaryButton onClick={() => setRecipeOpen(true)}>Create a recipe</PrimaryButton>
           </div>
+          <h3 className="mb-2 px-1 text-sm text-[var(--muted)]">Foods</h3>
+          <div className="diary-card overflow-hidden">
+            {(userFoods.data?.length ?? 0) === 0 && (
+              <p className="px-4 py-6 text-sm text-[var(--muted)]">
+                Save an ingredient with calories and macros. It shows up when you search foods for a recipe or meal.
+              </p>
+            )}
+            {userFoods.data?.map((food) => (
+              <div key={food.id} className="diary-row flex items-center gap-3 px-4 py-3">
+                <button type="button" className="min-w-0 flex-1 text-left" onClick={() => openEditFood(food)}>
+                  <div className="truncate text-[15px]">{food.name}</div>
+                  <div className="text-xs text-[var(--muted)]">
+                    {food.brand ? `${food.brand} · ` : ''}
+                    {macro(per100ToPortion(food.kcal, foodPortionGrams(food.servingAmount, food.servings)))} kcal ·{' '}
+                    {food.servings ?? 1} × {food.servingAmount ?? 100}
+                    {food.servingUnit === 'ml' ? 'ml' : 'g'}
+                  </div>
+                </button>
+                <TrashButton label="Delete food" onClick={() => void removeFood(food.id)} />
+              </div>
+            ))}
+          </div>
+          <h3 className="mt-6 mb-2 px-1 text-sm text-[var(--muted)]">Recipes</h3>
           <div className="diary-card overflow-hidden">
             {recipes.data?.length === 0 && <p className="px-4 py-6 text-sm text-[var(--muted)]">No saved recipes yet.</p>}
             {recipes.data?.map((recipe) => (
@@ -843,14 +964,14 @@ export function FuelPage() {
           {tdee != null ? (
             <div className="mt-4 space-y-3 text-sm">
               <p>
-                Goal is ICMR-NIN 2020 TDEE from Train body: <strong className="tabular">{macro(tdee)} kcal</strong>.
+                Goal is ICMR-NIN 2020 TDEE from Play body: <strong className="tabular">{macro(tdee)} kcal</strong>.
                 Sessions and Garmin logs add exercise calories back.
               </p>
               <p className="text-[var(--muted)]">
                 {macro(kcalGoal)} TDEE − {macro(food)} food + {macro(burned)} exercise = {macro(remaining)} left.
               </p>
-              <Link className="text-[var(--diary-blue)]" to="/train" onClick={() => setGoalOpen(false)}>
-                Edit height, weight, and activity in Train
+              <Link className="text-[var(--diary-blue)]" to="/play" onClick={() => setGoalOpen(false)}>
+                Edit height, weight, and activity in Play
               </Link>
             </div>
           ) : (
@@ -866,7 +987,7 @@ export function FuelPage() {
               <input className="field" inputMode="numeric" value={goalDraft} onChange={(event) => setGoalDraft(event.target.value)} required />
             </label>
             <p className="text-xs text-[var(--muted)]">
-              Save height and weight in Train → Body to replace this with TDEE. Macros follow 50% carbs, 20% protein, 30% fat.
+              Save height and weight in Play → Body to replace this with TDEE. Macros follow 50% carbs, 20% protein, 30% fat.
             </p>
             <div className="flex justify-end">
               <PrimaryButton type="submit">Save</PrimaryButton>
@@ -903,6 +1024,124 @@ export function FuelPage() {
             await removeRecipe(editingRecipe.id)
           }}
         />
+      )}
+
+      {foodOpen && (
+        <Dialog title={editingFood ? 'Edit food' : 'Create a food'} onClose={() => setFoodOpen(false)}>
+          <form
+            className="mt-4 space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void saveUserFood()
+            }}
+          >
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Name
+              <input
+                className="field mt-1"
+                value={foodDraft.name}
+                onChange={(event) => setFoodDraft((current) => ({ ...current, name: event.target.value }))}
+                required
+                placeholder="Greek yogurt"
+                autoFocus
+              />
+            </label>
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Brand
+              <input
+                className="field mt-1"
+                value={foodDraft.brand}
+                onChange={(event) => setFoodDraft((current) => ({ ...current, brand: event.target.value }))}
+                placeholder="Optional"
+              />
+            </label>
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Serving size
+              <span className="mt-1 grid grid-cols-[minmax(0,1fr)_4.5rem] gap-2">
+                <input
+                  className="field"
+                  inputMode="decimal"
+                  value={foodDraft.servingAmount}
+                  onChange={(event) => setFoodDraft((current) => ({ ...current, servingAmount: event.target.value }))}
+                  required
+                />
+                <select
+                  className="field"
+                  value={foodDraft.servingUnit}
+                  onChange={(event) =>
+                    setFoodDraft((current) => ({ ...current, servingUnit: event.target.value === 'ml' ? 'ml' : 'g' }))
+                  }
+                >
+                  <option value="g">g</option>
+                  <option value="ml">ml</option>
+                </select>
+              </span>
+            </label>
+            <label className="block text-xs font-medium text-[var(--muted)]">
+              Number of servings
+              <input
+                className="field mt-1"
+                inputMode="decimal"
+                value={foodDraft.servings}
+                onChange={(event) => setFoodDraft((current) => ({ ...current, servings: event.target.value }))}
+                required
+              />
+            </label>
+            <p className="text-xs text-[var(--muted)]">Calories and macros are for this serving.</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ['kcal', 'Calories'],
+                  ['protein', 'Protein g'],
+                  ['carbs', 'Carbs g'],
+                  ['fat', 'Fat g'],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="block text-xs font-medium text-[var(--muted)]">
+                  {label}
+                  <input
+                    className="field mt-1"
+                    inputMode="decimal"
+                    value={foodDraft[key]}
+                    onChange={(event) => setFoodDraft((current) => ({ ...current, [key]: event.target.value }))}
+                    placeholder="0"
+                  />
+                </label>
+              ))}
+            </div>
+            <details open className="rounded-md border border-[var(--line)] px-3 py-2">
+              <summary className="cursor-pointer text-sm">Micronutrients</summary>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {FOOD_MICROS.map((row) => (
+                  <label key={row.key} className="block text-xs font-medium text-[var(--muted)]">
+                    {row.label} ({row.unit})
+                    <input
+                      className="field mt-1"
+                      inputMode="decimal"
+                      value={foodDraft.micros[row.key] ?? ''}
+                      onChange={(event) =>
+                        setFoodDraft((current) => ({
+                          ...current,
+                          micros: { ...current.micros, [row.key]: event.target.value },
+                        }))
+                      }
+                      placeholder="—"
+                    />
+                  </label>
+                ))}
+              </div>
+            </details>
+            <div className="flex items-center justify-end gap-2">
+              {foodError && <p className="mr-auto text-sm text-[var(--danger)]">{foodError}</p>}
+              {editingFood && (
+                <button type="button" className="text-sm text-[var(--danger)]" onClick={() => void removeFood(editingFood.id)}>
+                  Delete
+                </button>
+              )}
+              <PrimaryButton type="submit">Save</PrimaryButton>
+            </div>
+          </form>
+        </Dialog>
       )}
 
       {recipeOpen && (
@@ -1136,6 +1375,7 @@ type DraftLine = {
   protein?: number
   carbs?: number
   fat?: number
+  micros?: Record<string, number>
 }
 
 type FoodDraft = {
@@ -1152,7 +1392,34 @@ type FoodDraft = {
     protein?: number
     carbs?: number
     fat?: number
+    micros?: Record<string, number>
   }[]
+}
+
+function linePayload(item: FoodDraft['items'][number]) {
+  return {
+    name: item.name.trim(),
+    grams: item.grams,
+    unit: item.unit,
+    externalId: item.externalId,
+    source: item.source,
+    kcal: item.kcal,
+    protein: item.protein,
+    carbs: item.carbs,
+    fat: item.fat,
+    micros: item.micros,
+  }
+}
+
+function sumMicros(lines: { micros?: Record<string, number> }[]) {
+  const out: Record<string, number> = {}
+  for (const line of lines) {
+    if (!line.micros) continue
+    for (const [key, value] of Object.entries(line.micros)) {
+      out[key] = (out[key] ?? 0) + Number(value)
+    }
+  }
+  return out
 }
 
 function FoodEditor({
@@ -1185,6 +1452,7 @@ function FoodEditor({
       protein: item.protein,
       carbs: item.carbs,
       fat: item.fat,
+      micros: item.micros,
       externalId: item.externalId,
       source: item.source,
     })),
@@ -1224,6 +1492,7 @@ function FoodEditor({
         protein: food.protein,
         carbs: food.carbs,
         fat: food.fat,
+        micros: food.micros,
       }
       return key ? current.map((row) => (row.key === key ? next : row)) : [...current, next]
     })
@@ -1247,6 +1516,7 @@ function FoodEditor({
           protein: line.protein,
           carbs: line.carbs,
           fat: line.fat,
+          micros: line.micros,
         })),
       })
     } finally {
@@ -1286,6 +1556,7 @@ function FoodEditor({
             </div>
           )}
           <MacroBoard food={totals} />
+          <MicroList micros={sumMicros(lines)} grams={100} />
           <div>
             <div className="mb-1 text-[15px] font-semibold">Meal Items</div>
             {lines.length === 0 && <p className="py-4 text-sm text-[var(--muted)]">No foods yet.</p>}
@@ -1304,6 +1575,7 @@ function FoodEditor({
                         protein: line.protein,
                         carbs: line.carbs,
                         fat: line.fat,
+                        micros: line.micros,
                         externalId: line.externalId,
                         source: line.source,
                         brand: line.brand,

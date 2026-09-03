@@ -1,11 +1,14 @@
 package com.verax.mind;
 
 import com.verax.common.ApiException;
+import com.verax.habit.AutoCompleteService;
 import com.verax.user.User;
 import com.verax.user.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.IsoFields;
 import java.util.ArrayList;
@@ -27,17 +30,20 @@ public class MindService {
     private final MindTagRepository tags;
     private final MindNoteRepository notes;
     private final UserRepository users;
+    private final AutoCompleteService autoComplete;
 
     public MindService(
             SleepNightRepository nights,
             MindTagRepository tags,
             MindNoteRepository notes,
-            UserRepository users
+            UserRepository users,
+            AutoCompleteService autoComplete
     ) {
         this.nights = nights;
         this.tags = tags;
         this.notes = notes;
         this.users = users;
+        this.autoComplete = autoComplete;
     }
 
     @Transactional(readOnly = true)
@@ -101,6 +107,14 @@ public class MindService {
             night.setSource(request.source().trim().toUpperCase(Locale.ROOT));
         }
         nights.save(night);
+        autoComplete.applyNamed(
+                userId,
+                night.getNightDate(),
+                "sleep",
+                BigDecimal.valueOf(night.sleptHours()).setScale(2, RoundingMode.HALF_UP),
+                BigDecimal.valueOf(8),
+                "Sleep log"
+        );
         return MindDtos.SleepView.from(night);
     }
 

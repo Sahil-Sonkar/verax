@@ -13,6 +13,7 @@ import com.verax.user.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -28,6 +29,9 @@ public class IntegrationService {
             "ACCOUNT_AGGREGATOR",
             "LYFTA",
             "CULT_FIT",
+            "YOUTUBE",
+            "INSTAGRAM",
+            "LINKEDIN",
             "MANUAL"
     );
 
@@ -57,8 +61,8 @@ public class IntegrationService {
                         "GOOGLE_HEALTH",
                         "Google Health / Fitbit",
                         "Steps, activity, sleep from Google or Fitbit accounts",
-                        "COMING_SOON",
-                        "Google Fit REST is shutting down. The replacement is Google Health API with restricted OAuth review. Verax can ingest values today; live OAuth needs a Google Cloud project."
+                        "INGEST",
+                        "Paste today's steps here or on Home. A reading named Steps marks the steps habit when it clears the target. Live Google Fit OAuth needs a Google Cloud Fitness project and review — Fit REST is shutting down."
                 ),
                 new IntegrationDtos.Provider(
                         "GARMIN",
@@ -94,6 +98,27 @@ public class IntegrationService {
                         "Gym check-ins and classes",
                         "MANUAL",
                         "Cult Fit has no public third-party API. Log class minutes or mark the linked habit after you train."
+                ),
+                new IntegrationDtos.Provider(
+                        "YOUTUBE",
+                        "YouTube",
+                        "Subscribers, views, watch time, retention",
+                        "INGEST",
+                        "YouTube Analytics has no personal-app OAuth path here. Paste a snapshot on Voice → Social."
+                ),
+                new IntegrationDtos.Provider(
+                        "INSTAGRAM",
+                        "Instagram",
+                        "Followers, reach, saves, shares",
+                        "INGEST",
+                        "Instagram Graph is business-account only. Paste Insights numbers on Voice → Social."
+                ),
+                new IntegrationDtos.Provider(
+                        "LINKEDIN",
+                        "LinkedIn",
+                        "Followers, impressions, engagement, profile views",
+                        "INGEST",
+                        "LinkedIn does not give a personal analytics API. Paste Creator or Page numbers on Voice → Social."
                 ),
                 new IntegrationDtos.Provider(
                         "MANUAL",
@@ -132,6 +157,15 @@ public class IntegrationService {
             Habit habit = habits.require(userId, request.habitId());
             autoComplete.completeHabit(userId, habit, request.date(), request.value(), loggedNote);
             habitUpdated = true;
+        } else if (metric.getName().toLowerCase(Locale.ROOT).contains("step")) {
+            habitUpdated = autoComplete.applyNamed(
+                    userId,
+                    request.date(),
+                    "step",
+                    request.value(),
+                    BigDecimal.valueOf(7500),
+                    loggedNote
+            );
         }
         return new IntegrationDtos.IngestResult(metric.getId(), metric.getName(), request.value(), request.date(), habitUpdated);
     }

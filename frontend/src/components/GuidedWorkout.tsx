@@ -121,7 +121,7 @@ export function GuidedWorkout({
       set.track === 'TIME'
         ? { seconds: Number(values.seconds) || 0 }
         : { reps: Number(values.reps) || 0, kg: Number(values.kg) || 0 }
-    await api(`/api/train/sets/${set.id}`, { method: 'PATCH', body: JSON.stringify(body) })
+    await api(`/api/play/sets/${set.id}`, { method: 'PATCH', body: JSON.stringify(body) })
   }
 
   async function checkSet(set: TrainSet) {
@@ -180,7 +180,7 @@ export function GuidedWorkout({
                     onClick={async () => {
                       const first = rows[0]
                       const previous = lastSet(name, rows.length + 1)
-                      await api(`/api/train/sessions/${session.id}/sets`, {
+                      await api(`/api/play/sessions/${session.id}/sets`, {
                         method: 'POST',
                         body: JSON.stringify({
                           exerciseName: name,

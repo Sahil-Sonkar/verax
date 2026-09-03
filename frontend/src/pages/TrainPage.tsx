@@ -188,23 +188,23 @@ export function TrainPage() {
   const [grain, setGrain] = useState<HistoryGrain>('week')
   const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null)
   const chartFrom = historyFrom(grain)
-  const templates = useQuery({ queryKey: ['train-templates'], queryFn: () => api<TrainTemplate[]>('/api/train/templates') })
+  const templates = useQuery({ queryKey: ['train-templates'], queryFn: () => api<TrainTemplate[]>('/api/play/templates') })
   const sessions = useQuery({
     queryKey: ['train-sessions', from, to],
-    queryFn: () => api<TrainSession[]>(`/api/train/sessions?from=${from}&to=${to}`),
+    queryFn: () => api<TrainSession[]>(`/api/play/sessions?from=${from}&to=${to}`),
   })
   const summary = useQuery({
     queryKey: ['train-summary', chartFrom, to, grain],
-    queryFn: () => api<TrainSummary>(`/api/train/summary?from=${chartFrom}&to=${to}&granularity=${grain}`),
+    queryFn: () => api<TrainSummary>(`/api/play/summary?from=${chartFrom}&to=${to}&granularity=${grain}`),
   })
   const activities = useQuery({
     queryKey: ['train-activities', from, to],
-    queryFn: () => api<TrainActivity[]>(`/api/train/activities?from=${from}&to=${to}`),
+    queryFn: () => api<TrainActivity[]>(`/api/play/activities?from=${from}&to=${to}`),
   })
   const [activeId, setActiveId] = useState<string | null>(() => localStorage.getItem('verax.train.session'))
   const active = useQuery({
     queryKey: ['train-session', activeId],
-    queryFn: () => api<TrainSession>(`/api/train/sessions/${activeId}`),
+    queryFn: () => api<TrainSession>(`/api/play/sessions/${activeId}`),
     enabled: Boolean(activeId),
     refetchInterval: activeId ? 15_000 : false,
   })
@@ -260,7 +260,7 @@ export function TrainPage() {
 
   async function start(templateId: string) {
     if (active.data && !active.data.endedAt) return
-    const session = await api<TrainSession>('/api/train/sessions', { method: 'POST', body: JSON.stringify({ templateId }) })
+    const session = await api<TrainSession>('/api/play/sessions', { method: 'POST', body: JSON.stringify({ templateId }) })
     localStorage.setItem('verax.train.session', session.id)
     setActiveId(session.id)
     setEditingId(null)
@@ -269,7 +269,7 @@ export function TrainPage() {
   }
 
   async function removeWorkout(id: string) {
-    await api(`/api/train/templates/${id}`, { method: 'DELETE' })
+    await api(`/api/play/templates/${id}`, { method: 'DELETE' })
     if (editingId === id) setEditingId(null)
     void queryClient.invalidateQueries({ queryKey: ['train-templates'] })
   }
@@ -281,7 +281,7 @@ export function TrainPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="kicker">Sessions</p>
-          <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Train</h1>
+          <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Play</h1>
           <p className="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-[var(--muted)]">
             Favourite workouts on the clock. Guided sets, rest timer, and the 1,324-exercise library with demos. End a session for volume and what moved since last time.
           </p>
@@ -294,7 +294,7 @@ export function TrainPage() {
         </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto border-b border-[var(--line)]" role="tablist" aria-label="Train">
+      <div className="flex gap-1 overflow-x-auto border-b border-[var(--line)]" role="tablist" aria-label="Play">
         {TABS.map((item) => (
           <button
             key={item.id}
@@ -318,13 +318,15 @@ export function TrainPage() {
           history={sessions.data ?? []}
           onRefresh={() => void queryClient.invalidateQueries({ queryKey: ['train-session'] })}
           onEnd={async () => {
-            const ended = await api<TrainSession>(`/api/train/sessions/${active.data!.id}/end`, { method: 'POST' })
+            const ended = await api<TrainSession>(`/api/play/sessions/${active.data!.id}/end`, { method: 'POST' })
             localStorage.removeItem('verax.train.session')
             setActiveId(null)
             setReportId(ended.id)
             setTrainTab('history')
             void queryClient.invalidateQueries({ queryKey: ['train-sessions'] })
             void queryClient.invalidateQueries({ queryKey: ['train-summary'] })
+            void queryClient.invalidateQueries({ queryKey: ['today'] })
+            void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
           }}
         />
       )}
@@ -337,7 +339,7 @@ export function TrainPage() {
               sessionLive={Boolean(active.data && !active.data.endedAt)}
               onBack={() => setEditingId(null)}
               onSave={async (next) => {
-                await api(`/api/train/templates/${editing.id}`, {
+                await api(`/api/play/templates/${editing.id}`, {
                   method: 'PUT',
                   body: JSON.stringify({
                     name: next.name,
@@ -480,7 +482,7 @@ export function TrainPage() {
                   <TrashButton
                     label={`Delete ${session.name}`}
                     onClick={async () => {
-                      await api(`/api/train/sessions/${session.id}`, { method: 'DELETE' })
+                      await api(`/api/play/sessions/${session.id}`, { method: 'DELETE' })
                       if (reportId === session.id) setReportId(null)
                       void queryClient.invalidateQueries({ queryKey: ['train-sessions'] })
                       void queryClient.invalidateQueries({ queryKey: ['train-summary'] })
@@ -520,7 +522,7 @@ export function TrainPage() {
             className="mt-4 space-y-3"
             onSubmit={async (event) => {
               event.preventDefault()
-              await api('/api/train/activities', {
+              await api('/api/play/activities', {
                 method: 'POST',
                 body: JSON.stringify({
                   name: activityName,
@@ -535,6 +537,8 @@ export function TrainPage() {
               })
               setGarminOpen(false)
               void queryClient.invalidateQueries({ queryKey: ['train-activities'] })
+              void queryClient.invalidateQueries({ queryKey: ['today'] })
+              void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
             }}
           >
             <input className="field" value={activityName} onChange={(event) => setActivityName(event.target.value)} required />
@@ -557,7 +561,7 @@ export function TrainPage() {
             className="mt-4 space-y-3"
             onSubmit={async (event) => {
               event.preventDefault()
-              await api('/api/train/templates', {
+              await api('/api/play/templates', {
                 method: 'POST',
                 body: JSON.stringify({
                   name: customName,
@@ -585,7 +589,7 @@ function SessionReportDialog({ id, onClose }: { id: string; onClose: () => void 
   const queryClient = useQueryClient()
   const report = useQuery({
     queryKey: ['train-report', id],
-    queryFn: () => api<TrainSessionReport>(`/api/train/sessions/${id}/report`),
+    queryFn: () => api<TrainSessionReport>(`/api/play/sessions/${id}/report`),
   })
   const data = report.data
   const radar = (data?.radar ?? []).map((row) => ({ ...row, volume: Number(row.volume) }))
@@ -629,7 +633,7 @@ function SessionReportDialog({ id, onClose }: { id: string; onClose: () => void 
                 if (!file) return
                 const body = new FormData()
                 body.append('file', file)
-                await api(`/api/train/sessions/${id}/photo`, { method: 'POST', body })
+                await api(`/api/play/sessions/${id}/photo`, { method: 'POST', body })
                 void queryClient.invalidateQueries({ queryKey: ['train-report', id] })
                 void queryClient.invalidateQueries({ queryKey: ['train-sessions'] })
               }}
@@ -639,7 +643,7 @@ function SessionReportDialog({ id, onClose }: { id: string; onClose: () => void 
           <TrashButton
             label="Delete session"
             onClick={async () => {
-              await api(`/api/train/sessions/${id}`, { method: 'DELETE' })
+              await api(`/api/play/sessions/${id}`, { method: 'DELETE' })
               void queryClient.invalidateQueries({ queryKey: ['train-sessions'] })
               void queryClient.invalidateQueries({ queryKey: ['train-summary'] })
               onClose()
@@ -695,7 +699,7 @@ function ExerciseSearchDialog({
     setSelected(null)
     try {
       const local = searchCatalog(q)
-      const results = local.length > 0 ? local : await api<ExerciseHit[]>(`/api/train/exercises?q=${encodeURIComponent(q)}`)
+      const results = local.length > 0 ? local : await api<ExerciseHit[]>(`/api/play/exercises?q=${encodeURIComponent(q)}`)
       setHits(results)
       setSearched(true)
       if (results.length === 0) setError('No exercises found')
@@ -1049,7 +1053,7 @@ function WorkoutEditor({
               track = local.track || 'REPS'
             } else {
               try {
-                const results = await api<ExerciseHit[]>(`/api/train/exercises?q=${encodeURIComponent(customName)}`)
+                const results = await api<ExerciseHit[]>(`/api/play/exercises?q=${encodeURIComponent(customName)}`)
                 const hit =
                   results.find((row) => row.name.toLowerCase() === customName.toLowerCase()) ?? results[0]
                 if (hit) {
@@ -1089,7 +1093,7 @@ function WorkoutEditor({
 
 function BodyPanel() {
   const queryClient = useQueryClient()
-  const profile = useQuery({ queryKey: ['body-profile'], queryFn: () => api<BodyProfile>('/api/train/body/profile') })
+  const profile = useQuery({ queryKey: ['body-profile'], queryFn: () => api<BodyProfile>('/api/play/body/profile') })
   const [height, setHeight] = useState('')
   const [sex, setSex] = useState('MALE')
   const [birthYear, setBirthYear] = useState('')
@@ -1121,7 +1125,7 @@ function BodyPanel() {
       const value = n(nextDraft[row.key] ?? '')
       if (value != null) body[row.key] = kind === 'TAPE' ? unitToCm(value, tapeUnit) : value
     }
-    await api('/api/train/body/logs', { method: 'POST', body: JSON.stringify(body) })
+    await api('/api/play/body/logs', { method: 'POST', body: JSON.stringify(body) })
     void queryClient.invalidateQueries({ queryKey: ['body-logs'] })
     void queryClient.invalidateQueries({ queryKey: ['body-profile'] })
   }
@@ -1173,7 +1177,7 @@ function BodyPanel() {
         <div className="mt-4">
           <PrimaryButton
             onClick={async () => {
-              await api('/api/train/body/profile', {
+              await api('/api/play/body/profile', {
                 method: 'PUT',
                 body: JSON.stringify({
                   heightCm: n(height),
@@ -1319,7 +1323,7 @@ function ImportCompositionDialog({
     setPreview(URL.createObjectURL(next))
     try {
       const text = await readImageText(next)
-      const parsed = await api<BodyLog>('/api/train/body/scan', { method: 'POST', body: JSON.stringify({ text }) })
+      const parsed = await api<BodyLog>('/api/play/body/scan', { method: 'POST', body: JSON.stringify({ text }) })
       if (parsed.date) {
         setImportDate((current) => (current === today() ? parsed.date! : current))
       }
@@ -1411,12 +1415,12 @@ function ImportCompositionDialog({
 
 function MeasurementHistory() {
   const queryClient = useQueryClient()
-  const logs = useQuery({ queryKey: ['body-logs'], queryFn: () => api<BodyLog[]>('/api/train/body/logs') })
+  const logs = useQuery({ queryKey: ['body-logs'], queryFn: () => api<BodyLog[]>('/api/play/body/logs') })
   const [tapeUnit, setTapeUnit] = useTapeUnit()
   const rows = logs.data ?? []
 
   async function remove(id: string) {
-    await api(`/api/train/body/logs/${id}`, { method: 'DELETE' })
+    await api(`/api/play/body/logs/${id}`, { method: 'DELETE' })
     void queryClient.invalidateQueries({ queryKey: ['body-logs'] })
     void queryClient.invalidateQueries({ queryKey: ['body-profile'] })
   }

@@ -18,6 +18,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { TodayPage } from './pages/TodayPage'
 import { TrainPage } from './pages/TrainPage'
 import { TransformationPage } from './pages/TransformationPage'
+import { VoicePage } from './pages/VoicePage'
 import type { ReactNode } from 'react'
 
 const queryClient = new QueryClient({
@@ -69,18 +70,22 @@ export default function App() {
             >
               <Route path="/" element={<HomePage />} />
               <Route path="/routine" element={<RoutinePage />} />
-              <Route path="/fuel" element={<FuelPage />} />
-              <Route path="/recipe" element={<Navigate to="/fuel" replace />} />
-              <Route path="/train" element={<TrainPage />} />
-              <Route path="/finance" element={<FinancePage />} />
+              <Route path="/body" element={<FuelPage />} />
+              <Route path="/fuel" element={<Navigate to="/body" replace />} />
+              <Route path="/recipe" element={<Navigate to="/body" replace />} />
+              <Route path="/play" element={<TrainPage />} />
+              <Route path="/train" element={<Navigate to="/play" replace />} />
+              <Route path="/money" element={<FinancePage />} />
+              <Route path="/finance" element={<Navigate to="/money" replace />} />
               <Route path="/mind" element={<MindPage />} />
+              <Route path="/voice" element={<VoicePage />} />
               <Route path="/today" element={<TodayPage />} />
               <Route path="/goals" element={<GoalsPage />} />
               <Route path="/habits" element={<HabitsPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/transformation" element={<TransformationPage />} />
               <Route path="/journal" element={<JournalPage />} />
-              <Route path="/invest" element={<Navigate to="/finance" replace />} />
+              <Route path="/invest" element={<Navigate to="/money" replace />} />
               <Route path="/consistency" element={<DashboardPage />} />
               <Route path="/meds" element={<MedicationsPage />} />
               <Route path="/settings" element={<SettingsPage />} />

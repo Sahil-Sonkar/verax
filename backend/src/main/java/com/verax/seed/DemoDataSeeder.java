@@ -138,9 +138,9 @@ public class DemoDataSeeder implements ApplicationRunner {
         list.add(habit(user, cats.get("fitness"), "Follow nutrition plan", "Eat to the plan. No negotiation on weekdays.", "utensils",
                 HabitSection.NON_NEGOTIABLE, FrequencyType.DAILY, FrequencyConfig.daily(),
                 null, null, Importance.CRITICAL, origin));
-        list.add(habit(user, cats.get("fitness"), "7,000+ steps", "Daily movement floor.", "footprints",
+        list.add(habit(user, cats.get("fitness"), "7,500+ steps", "Daily movement floor.", "footprints",
                 HabitSection.NON_NEGOTIABLE, FrequencyType.DAILY, FrequencyConfig.daily(),
-                BigDecimal.valueOf(7000), "steps", Importance.IMPORTANT, origin));
+                BigDecimal.valueOf(7500), "steps", Importance.IMPORTANT, origin));
         list.add(habit(user, cats.get("appearance"), "Hair / health routine", "Treatment, scalp care, non-negotiable sequence.", "sparkles",
                 HabitSection.NON_NEGOTIABLE, FrequencyType.DAILY, FrequencyConfig.daily(),
                 null, null, Importance.IMPORTANT, origin));
@@ -153,9 +153,9 @@ public class DemoDataSeeder implements ApplicationRunner {
         list.add(habit(user, cats.get("learning"), "Reading", "Pages over perfection.", "book",
                 HabitSection.GROWTH, FrequencyType.DAILY, FrequencyConfig.daily(),
                 BigDecimal.valueOf(20), "pages", Importance.OPTIONAL, origin));
-        list.add(habit(user, cats.get("personal"), "Meditation", "Ten quiet minutes.", "lotus",
+        list.add(habit(user, cats.get("personal"), "Meditation", "Fifteen quiet minutes.", "lotus",
                 HabitSection.GROWTH, FrequencyType.DAILY, FrequencyConfig.daily(),
-                BigDecimal.TEN, "minutes", Importance.OPTIONAL, origin));
+                BigDecimal.valueOf(15), "minutes", Importance.OPTIONAL, origin));
         list.add(habit(user, cats.get("health"), "Supplements", "A stack, not a single tick.", "pill",
                 HabitSection.GROWTH, FrequencyType.DAILY, FrequencyConfig.daily(),
                 null, null, Importance.IMPORTANT, origin));
@@ -197,6 +197,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         habit.setName(name);
         habit.setDescription(description);
         habit.setIcon(icon);
+        habit.setTracked(trackedName(name));
         habit.setSection(section);
         habit.setFrequencyType(frequency);
         habit.setFrequencyConfig(config);
@@ -206,6 +207,13 @@ public class DemoDataSeeder implements ApplicationRunner {
         habit.setWeight(importance.defaultWeight());
         habit.setStartDate(start);
         return habit;
+    }
+
+    private static boolean trackedName(String name) {
+        String n = name.toLowerCase();
+        return n.contains("sleep") || n.contains("water") || n.contains("step")
+                || n.contains("read") || n.contains("supplement") || n.contains("exercise")
+                || n.contains("workout") || n.contains("meditat");
     }
 
     private void seedCompletions(User user, List<Habit> createdHabits, LocalDate from, LocalDate to) {
@@ -218,7 +226,7 @@ public class DemoDataSeeder implements ApplicationRunner {
             addDaily(rows, user, byName.get("Sleep 7.5–8 hours"), date, bias(random, rough ? 0.72 : 0.94));
             addDaily(rows, user, byName.get("Exercise"), date, bias(random, weekend ? 0.7 : 0.88));
             addDaily(rows, user, byName.get("Follow nutrition plan"), date, bias(random, weekend ? 0.68 : 0.9));
-            addDaily(rows, user, byName.get("7,000+ steps"), date, bias(random, 0.9));
+            addDaily(rows, user, byName.get("7,500+ steps"), date, bias(random, 0.9));
             addDaily(rows, user, byName.get("Hair / health routine"), date, bias(random, 0.92));
             addDaily(rows, user, byName.get("2 hours deep work"), date, weekend ? skipOrDo(random, 0.45) : bias(random, rough ? 0.55 : 0.84));
             addDaily(rows, user, byName.get("Content creation"), date, bias(random, weekend ? 0.55 : 0.62));

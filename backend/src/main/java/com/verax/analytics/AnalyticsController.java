@@ -3,12 +3,14 @@ package com.verax.analytics;
 import com.verax.security.CurrentUser;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/analytics")
@@ -35,6 +37,14 @@ public class AnalyticsController {
         return analytics.heatmapRange(currentUser.id(), from, to);
     }
 
+    @GetMapping("/tracker")
+    public AnalyticsDtos.Tracker tracker(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        return analytics.tracker(currentUser.id(), from, to);
+    }
+
     @GetMapping("/trends")
     public AnalyticsDtos.Trends trends(
             @RequestParam(defaultValue = "daily") String granularity,
@@ -58,6 +68,15 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
         return analytics.habits(currentUser.id(), from, to);
+    }
+
+    @GetMapping("/habits/{id}/series")
+    public AnalyticsDtos.HabitSeries habitSeries(
+            @PathVariable UUID id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+    ) {
+        return analytics.habitSeries(currentUser.id(), id, from, to);
     }
 
     @GetMapping("/compare")

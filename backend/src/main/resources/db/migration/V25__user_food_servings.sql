@@ -1,0 +1,4 @@
+ALTER TABLE user_foods
+    ADD COLUMN serving_amount NUMERIC(12, 2) NOT NULL DEFAULT 100,
+    ADD COLUMN serving_unit VARCHAR(4) NOT NULL DEFAULT 'g',
+    ADD COLUMN servings INT NOT NULL DEFAULT 1;

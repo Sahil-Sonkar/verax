@@ -19,13 +19,15 @@ export function HabitRow({
   item,
   onStatus,
   nested = false,
+  plain = false,
 }: {
   item: HabitItem
   onStatus: (habitId: string, status: CompletionStatus, value?: number) => void
   nested?: boolean
+  plain?: boolean
 }) {
   const children = item.children ?? []
-  const isGroup = children.length > 0
+  const isGroup = !plain && children.length > 0
   const accent = categoryColor(item.habit.category?.name, item.habit.category?.color)
   const target = item.habit.targetValue ?? 3
   const current = item.value ?? 0
@@ -60,11 +62,27 @@ export function HabitRow({
             )}
             <div className="min-w-0">
               <div className="truncate text-[15px]">{item.habit.name}</div>
-              <div className="truncate text-xs" style={{ color: accent }}>
-                {item.habit.category?.name ?? 'Other'} · {importanceLabel(item.habit.importance)}
-                {item.habit.targetValue ? ` · ${item.habit.targetValue} ${item.habit.unit ?? ''}` : ''}
-                {item.periodProgress ? ` · ${item.periodProgress}` : ''}
-                {isGroup ? ` · ${children.filter((c) => c.status === 'COMPLETED').length}/${children.length}` : ''}
+              <div className="truncate text-xs" style={{ color: plain ? 'var(--muted)' : accent }}>
+                {plain
+                  ? [
+                      item.value != null && item.habit.targetValue != null
+                        ? `${item.value} / ${item.habit.targetValue} ${item.habit.unit ?? ''}`.trim()
+                        : item.habit.targetValue
+                          ? `${item.habit.targetValue} ${item.habit.unit ?? ''}`.trim()
+                          : null,
+                      item.periodProgress,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ') || 'Daily'
+                  : [
+                      item.habit.category?.name ?? 'Other',
+                      importanceLabel(item.habit.importance),
+                      item.habit.targetValue ? `${item.habit.targetValue} ${item.habit.unit ?? ''}`.trim() : null,
+                      item.periodProgress,
+                      isGroup ? `${children.filter((c) => c.status === 'COMPLETED').length}/${children.length}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
               </div>
             </div>
           </div>
@@ -115,9 +133,10 @@ export function HabitRow({
           />
         </div>
       )}
-      {children.map((child) => (
-        <HabitRow key={child.habit.id} item={child} onStatus={onStatus} nested />
-      ))}
+      {!plain &&
+        children.map((child) => (
+          <HabitRow key={child.habit.id} item={child} onStatus={onStatus} nested />
+        ))}
     </div>
   )
 }

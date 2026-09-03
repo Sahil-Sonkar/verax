@@ -4,6 +4,22 @@ import { Dialog } from './Dialog'
 import { api } from '../lib/api'
 import type { FoodHit, FoodServing } from '../types'
 
+export const FOOD_MICROS = [
+  { key: 'saturated_fat', label: 'Saturated fat', unit: 'g' },
+  { key: 'polyunsaturated_fat', label: 'Polyunsaturated fat', unit: 'g' },
+  { key: 'monounsaturated_fat', label: 'Monounsaturated fat', unit: 'g' },
+  { key: 'trans_fat', label: 'Trans fat', unit: 'g' },
+  { key: 'cholesterol', label: 'Cholesterol', unit: 'mg' },
+  { key: 'sodium', label: 'Sodium', unit: 'mg' },
+  { key: 'potassium', label: 'Potassium', unit: 'mg' },
+  { key: 'fiber', label: 'Fiber', unit: 'g' },
+  { key: 'sugar', label: 'Sugar', unit: 'g' },
+  { key: 'vitamin_a', label: 'Vitamin A', unit: '% DV' },
+  { key: 'vitamin_c', label: 'Vitamin C', unit: '% DV' },
+  { key: 'calcium', label: 'Calcium', unit: '% DV' },
+  { key: 'iron', label: 'Iron', unit: '% DV' },
+] as const
+
 export type PickedFood = {
   name: string
   grams: number
@@ -15,6 +31,7 @@ export type PickedFood = {
   protein: number
   carbs: number
   fat: number
+  micros?: Record<string, number>
 }
 
 const DEFAULT_SERVINGS: FoodServing[] = [
@@ -45,6 +62,7 @@ export function scaleFood(hit: FoodHit, grams: number, unit: 'g' | 'ml' = 'g'): 
     protein: Number(hit.protein) * factor,
     carbs: Number(hit.carbs) * factor,
     fat: Number(hit.fat) * factor,
+    micros: scaleMicros(hit.micros, factor),
   }
 }
 
@@ -73,6 +91,7 @@ export function hitFromMacros(line: {
   externalId?: string
   source?: string
   brand?: string
+  micros?: Record<string, number>
 }): FoodHit {
   const grams = line.grams > 0 ? line.grams : 100
   const factor = 100 / grams
@@ -91,6 +110,7 @@ export function hitFromMacros(line: {
       { label: unit === 'ml' ? '1 ml' : '1 gram', amount: 1, unit },
       { label: unit === 'ml' ? '100 ml' : '100 gram', amount: 100, unit },
     ],
+    micros: scaleMicros(line.micros, factor),
   }
 }
 
@@ -213,7 +233,7 @@ export function FoodSearch({ onSelect }: { onSelect: (hit: FoodHit) => void }) {
               <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onSelect(hit)}>
                 <span className="block truncate text-[15px] font-medium">{hit.name}</span>
                 <span className="block text-xs text-[var(--muted)]">
-                  {hit.brand ? `${hit.brand} · ` : ''}
+                  {hit.source === 'CUSTOM' ? 'Yours · ' : hit.brand ? `${hit.brand} · ` : ''}
                   {Math.round(Number(hit.kcal))} cal / 100g
                 </span>
               </button>
@@ -254,13 +274,21 @@ export function FoodEntryDialog({
   onConfirm: (food: PickedFood) => void | Promise<void>
 }) {
   const options = servingsOf(hit)
-  const initial = initialServing(options, amount, unit)
+  const own = hit.source === 'CUSTOM' ? hit.servings?.[0] : undefined
+  const initial = initialServing(
+    options,
+    amount,
+    unit,
+    own ? Number(own.amount) : undefined,
+    own?.unit === 'ml' ? 'ml' : own ? 'g' : undefined,
+    hit.defaultServings,
+  )
   const [optionKey, setOptionKey] = useState(initial.key)
   const [servings, setServings] = useState(initial.servings)
   const [saving, setSaving] = useState(false)
 
   const option = options.find((row) => keyOf(row) === optionKey) ?? options[0]
-  const count = Math.max(1, Math.floor(Number(servings) || 1))
+  const count = Number(servings) > 0 ? Number(servings) : 1
   const portion = Number(option?.amount) > 0 ? Number(option.amount) : 1
   const measure = option?.unit === 'ml' ? 'ml' : 'g'
   const grams = count * portion
@@ -315,19 +343,45 @@ export function FoodEntryDialog({
           <span>Number of Servings</span>
           <input
             className="food-value"
-            inputMode="numeric"
+            inputMode="decimal"
             value={servings}
             onChange={(event) => {
-              const next = event.target.value.replace(/[^\d]/g, '')
-              setServings(next === '' ? '' : String(Math.max(1, Number(next))))
+              setServings(event.target.value.replace(/[^\d.]/g, ''))
             }}
           />
         </div>
         <div className="px-6 pt-5">
           <MacroBoard food={preview} />
+          <MicroList micros={hit.micros} grams={grams} />
         </div>
       </div>
     </Dialog>
+  )
+}
+
+export function MicroList({
+  micros,
+  grams = 100,
+}: {
+  micros?: Record<string, number>
+  grams?: number
+}) {
+  const factor = (grams > 0 ? grams : 100) / 100
+  return (
+    <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+      {FOOD_MICROS.map((row) => {
+        const raw = micros?.[row.key]
+        const missing = raw == null || Number.isNaN(Number(raw))
+        return (
+          <div key={row.key} className="flex justify-between gap-3 border-b border-[var(--line)] py-1.5">
+            <dt className="text-[var(--muted)]">{row.label}</dt>
+            <dd className="tabular">
+              {missing ? '—' : `${fmt(Number(raw) * factor)} ${row.unit}`}
+            </dd>
+          </div>
+        )
+      })}
+    </dl>
   )
 }
 
@@ -408,12 +462,26 @@ function keyOf(row: FoodServing) {
   return `${row.amount}-${row.unit}`
 }
 
-function initialServing(options: FoodServing[], amount?: number, unit?: 'g' | 'ml') {
+function initialServing(
+  options: FoodServing[],
+  amount?: number,
+  unit?: 'g' | 'ml',
+  preferredAmount?: number,
+  preferredUnit?: 'g' | 'ml',
+  defaultCount?: number,
+) {
   if (amount != null && amount > 0) {
     const matchUnit = unit === 'ml' ? 'ml' : 'g'
     const one = options.find((row) => Number(row.amount) === 1 && row.unit === matchUnit)
     if (one) {
       return { key: keyOf(one), servings: String(Math.max(1, Math.round(amount))) }
+    }
+  }
+  if (preferredAmount != null && preferredAmount > 0) {
+    const matchUnit = preferredUnit === 'ml' ? 'ml' : 'g'
+    const match = options.find((row) => Number(row.amount) === preferredAmount && row.unit === matchUnit)
+    if (match) {
+      return { key: keyOf(match), servings: String(defaultCount != null && defaultCount > 0 ? defaultCount : 1) }
     }
   }
   const oneGram = options.find((row) => Number(row.amount) === 1 && row.unit === 'g')
@@ -425,4 +493,9 @@ function initialServing(options: FoodServing[], amount?: number, unit?: 'g' | 'm
 function fmt(value: number) {
   const rounded = Math.round(value * 10) / 10
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
+}
+
+function scaleMicros(micros: Record<string, number> | undefined, factor: number) {
+  if (!micros) return undefined
+  return Object.fromEntries(Object.entries(micros).map(([key, value]) => [key, Number(value) * factor]))
 }

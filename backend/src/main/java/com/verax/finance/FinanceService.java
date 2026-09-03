@@ -339,12 +339,30 @@ public class FinanceService {
         return rows;
     }
 
-    private FinanceDtos.WorkbookView toWorkbook(List<BudgetItem> rows, List<String> months) {
+    static String earliestAmountMonth(List<BudgetItem> rows) {
+        return rows.stream()
+                .flatMap(row -> row.getAmounts().stream())
+                .map(BudgetAmount::getYearMonth)
+                .filter(month -> month != null && !month.isBlank())
+                .min(String::compareTo)
+                .orElse(null);
+    }
+
+    static FinanceDtos.WorkbookView toWorkbook(List<BudgetItem> rows, List<String> months) {
         List<FinanceDtos.WorkbookItemView> views = rows.stream().map(row -> toItemView(row, months)).toList();
         java.util.Map<String, FinanceDtos.MonthTotal> totals = new java.util.LinkedHashMap<>();
+        if (months.isEmpty()) {
+            return new FinanceDtos.WorkbookView(months, views, totals);
+        }
+        String origin = earliestAmountMonth(rows);
+        if (origin == null) {
+            origin = months.getFirst();
+        }
+        String walkFrom = origin.compareTo(months.getFirst()) < 0 ? origin : months.getFirst();
+        java.util.Set<String> visible = new java.util.HashSet<>(months);
         BigDecimal running = BigDecimal.ZERO;
-        boolean firstMonth = true;
-        for (String month : months) {
+        boolean passedOrigin = false;
+        for (String month : monthsBetween(walkFrom, months.getLast())) {
             BigDecimal expenses = BigDecimal.ZERO;
             BigDecimal income = BigDecimal.ZERO;
             for (BudgetItem row : rows) {
@@ -359,16 +377,25 @@ public class FinanceService {
                 }
             }
             BigDecimal balance = income.subtract(expenses);
-            if (!firstMonth) {
+            boolean isOrigin = month.equals(origin);
+            if (isOrigin) {
+                passedOrigin = true;
+            } else if (passedOrigin) {
                 running = running.add(balance);
             }
-            totals.put(month, new FinanceDtos.MonthTotal(expenses, income, balance, firstMonth ? BigDecimal.ZERO : running));
-            firstMonth = false;
+            if (visible.contains(month)) {
+                totals.put(month, new FinanceDtos.MonthTotal(
+                        expenses,
+                        income,
+                        balance,
+                        isOrigin || !passedOrigin ? BigDecimal.ZERO : running
+                ));
+            }
         }
         return new FinanceDtos.WorkbookView(months, views, totals);
     }
 
-    private FinanceDtos.WorkbookItemView toItemView(BudgetItem item, List<String> months) {
+    private static FinanceDtos.WorkbookItemView toItemView(BudgetItem item, List<String> months) {
         java.util.Map<String, BigDecimal> map = new java.util.LinkedHashMap<>();
         for (String month : months) {
             map.put(month, amountFor(item, month));

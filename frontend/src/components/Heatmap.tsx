@@ -1,4 +1,5 @@
 import { clsx } from 'clsx'
+import { useState } from 'react'
 import type { HeatCell } from '../types'
 
 const HEAT = [
@@ -10,6 +11,15 @@ const HEAT = [
   'var(--heat-5)',
 ]
 
+const HEAT_GREEN = [
+  'var(--heat-green-0)',
+  'var(--heat-green-1)',
+  'var(--heat-green-2)',
+  'var(--heat-green-3)',
+  'var(--heat-green-4)',
+  'var(--heat-green-5)',
+]
+
 function startOfWeek(date: Date) {
   const copy = new Date(date)
   const day = (copy.getDay() + 6) % 7
@@ -19,19 +29,24 @@ function startOfWeek(date: Date) {
 }
 
 function iso(date: Date) {
-  return date.toISOString().slice(0, 10)
+  return new Intl.DateTimeFormat('en-CA').format(date)
 }
 
 export function ConsistencyHeatmap({
   cells,
   onSelect,
   selected,
+  tone = 'blue',
 }: {
   cells: HeatCell[]
   onSelect?: (date: string) => void
   selected?: string
+  tone?: 'blue' | 'green'
 }) {
+  const palette = tone === 'green' ? HEAT_GREEN : HEAT
   const byDate = new Map(cells.map((cell) => [cell.date, cell]))
+  const [hint, setHint] = useState<string | null>(null)
+  const showCount = cells.some((cell) => cell.completed != null)
   if (cells.length === 0) {
     return <p className="text-sm text-[var(--muted)]">No days logged yet.</p>
   }
@@ -79,38 +94,56 @@ export function ConsistencyHeatmap({
                 month: 'long',
                 day: 'numeric',
               }).format(date)
+              const count = cell.completed
+              const detail =
+                count != null
+                  ? `${count % 1 === 0 ? count : count.toFixed(1)}`
+                  : `${cell.percent}%`
               return (
                 <button
                   key={key}
                   type="button"
                   role="gridcell"
-                  aria-label={`${label}: ${cell.percent}%`}
+                  aria-label={`${label}: ${detail}`}
                   aria-pressed={selected === key}
-                  title={`${label}: ${cell.percent}%`}
+                  title={`${label}: ${detail}`}
                   onClick={() => onSelect?.(key)}
+                  onMouseEnter={() => setHint(`${label} · ${detail}`)}
+                  onMouseLeave={() => setHint(null)}
+                  onFocus={() => setHint(`${label} · ${detail}`)}
+                  onBlur={() => setHint(null)}
                   className={clsx(
                     'aspect-square w-full min-h-0 rounded-[2px] transition-transform duration-150 hover:scale-110',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
                     selected === key && 'ring-1 ring-[var(--fg)]',
                   )}
-                  style={{ background: HEAT[cell.level] ?? HEAT[0] }}
+                  style={{ background: palette[cell.level] ?? palette[0] }}
                 />
               )
             })}
           </div>
         ))}
       </div>
-      <div className="mt-3 flex items-center gap-2 text-[10px] tracking-wide text-[var(--muted)]">
-        Less
-        {HEAT.map((color, i) => (
-          <span
-            key={color}
-            className="size-3.5 rounded-[4px]"
-            style={{ background: color, opacity: i === 0 ? 0.7 : 1 }}
-            aria-hidden="true"
-          />
-        ))}
-        More
+      <div className="mt-3 flex items-center justify-between gap-3 text-[10px] tracking-wide text-[var(--muted)]">
+        {tone === 'green' ? (
+          <span className="min-h-[1.25rem] tabular text-xs text-[var(--fg)]">
+            {hint ?? (showCount ? 'Hover a day' : '')}
+          </span>
+        ) : (
+          <span />
+        )}
+        <span className="flex items-center gap-2">
+          Less
+          {palette.map((color, i) => (
+            <span
+              key={color}
+              className="size-3.5 rounded-[4px]"
+              style={{ background: color, opacity: i === 0 ? 0.7 : 1 }}
+              aria-hidden="true"
+            />
+          ))}
+          More
+        </span>
       </div>
     </div>
   )

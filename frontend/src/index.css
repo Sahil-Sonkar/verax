@@ -63,6 +63,12 @@
   --heat-3: #3d7ec9;
   --heat-4: #24507f;
   --heat-5: #163250;
+  --heat-green-0: #eeebe4;
+  --heat-green-1: #c6e6c3;
+  --heat-green-2: #7bc47f;
+  --heat-green-3: #3fa34d;
+  --heat-green-4: #2b7a34;
+  --heat-green-5: #196127;
   --ease: cubic-bezier(0.2, 0, 0, 1);
   --radius-card: 14px;
   --radius-field: 8px;
@@ -104,6 +110,12 @@ html.dark {
   --heat-3: #5b9bd6;
   --heat-4: #8fb4d6;
   --heat-5: #c5d9ec;
+  --heat-green-0: #1c1b19;
+  --heat-green-1: #0e4429;
+  --heat-green-2: #006d32;
+  --heat-green-3: #26a641;
+  --heat-green-4: #39d353;
+  --heat-green-5: #56e87b;
   --shadow-tint: color-mix(in srgb, #000 35%, transparent);
   --shadow-border: 0 0 0 1px oklch(1 0 0 / 0.08);
   --shadow-border-hover: 0 0 0 1px oklch(1 0 0 / 0.13);
@@ -451,6 +463,25 @@ html.dark .field {
 .field:focus-visible {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+input[type='date'],
+input[type='month'],
+input[type='datetime-local'] {
+  appearance: auto;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+input[type='date']::-webkit-datetime-edit-year-field,
+input[type='month']::-webkit-datetime-edit-year-field,
+input[type='datetime-local']::-webkit-datetime-edit-year-field {
+  min-width: 4ch;
+  padding-inline: 0.15em;
+}
+
+input.field[type='date'],
+input.field[type='month'] {
+  min-width: 11rem;
 }
 
 .icon-btn {

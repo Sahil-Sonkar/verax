@@ -3,6 +3,7 @@ package com.verax.recipe;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public final class RecipeDtos {
@@ -23,8 +24,31 @@ public final class RecipeDtos {
             BigDecimal carbs,
             BigDecimal fat,
             String per,
-            java.util.List<ServingOption> servings
+            java.util.List<ServingOption> servings,
+            Map<String, BigDecimal> micros,
+            BigDecimal defaultServings
     ) {
+        public FoodHit {
+            servings = servings == null ? List.of() : servings;
+            micros = micros == null ? Map.of() : micros;
+            defaultServings = defaultServings == null || defaultServings.signum() <= 0 ? BigDecimal.ONE : defaultServings;
+        }
+
+        public FoodHit(
+                String id,
+                String source,
+                String name,
+                String brand,
+                BigDecimal kcal,
+                BigDecimal protein,
+                BigDecimal carbs,
+                BigDecimal fat,
+                String per,
+                java.util.List<ServingOption> servings
+        ) {
+            this(id, source, name, brand, kcal, protein, carbs, fat, per, servings, Map.of(), BigDecimal.ONE);
+        }
+
         public FoodHit(
                 String id,
                 String source,
@@ -36,7 +60,81 @@ public final class RecipeDtos {
                 BigDecimal fat,
                 String per
         ) {
-            this(id, source, name, brand, kcal, protein, carbs, fat, per, java.util.List.of());
+            this(id, source, name, brand, kcal, protein, carbs, fat, per, List.of(), Map.of(), BigDecimal.ONE);
+        }
+    }
+
+    public record UserFoodUpsert(
+            String name,
+            String brand,
+            BigDecimal kcal,
+            BigDecimal protein,
+            BigDecimal carbs,
+            BigDecimal fat,
+            BigDecimal servingAmount,
+            String servingUnit,
+            BigDecimal servings,
+            Map<String, BigDecimal> micros
+    ) {
+    }
+
+    public record UserFoodView(
+            UUID id,
+            String name,
+            String brand,
+            BigDecimal kcal,
+            BigDecimal protein,
+            BigDecimal carbs,
+            BigDecimal fat,
+            String per,
+            BigDecimal servingAmount,
+            String servingUnit,
+            BigDecimal servings,
+            Map<String, BigDecimal> micros
+    ) {
+        public static UserFoodView from(UserFood food) {
+            String unit = LineView.measure(food.getServingUnit());
+            return new UserFoodView(
+                    food.getId(),
+                    food.getName(),
+                    food.getBrand(),
+                    food.getKcal(),
+                    food.getProtein(),
+                    food.getCarbs(),
+                    food.getFat(),
+                    "100g",
+                    food.getServingAmount() == null || food.getServingAmount().signum() <= 0
+                            ? BigDecimal.valueOf(100)
+                            : food.getServingAmount(),
+                    unit,
+                    food.getServings() == null || food.getServings().signum() <= 0
+                            ? BigDecimal.ONE
+                            : food.getServings(),
+                    FoodNutrients.fromStored(food.getMicros())
+            );
+        }
+
+        public FoodHit toHit() {
+            String unit = LineView.measure(servingUnit);
+            String label = servingAmount.stripTrailingZeros().toPlainString() + (unit.equals("ml") ? " ml" : " gram");
+            return new FoodHit(
+                    id.toString(),
+                    "CUSTOM",
+                    name,
+                    brand,
+                    kcal,
+                    protein,
+                    carbs,
+                    fat,
+                    per,
+                    List.of(
+                            new ServingOption(label, servingAmount, unit),
+                            new ServingOption(unit.equals("ml") ? "1 ml" : "1 gram", BigDecimal.ONE, unit),
+                            new ServingOption(unit.equals("ml") ? "100 ml" : "100 gram", BigDecimal.valueOf(100), unit)
+                    ),
+                    micros == null ? Map.of() : micros,
+                    servings
+            );
         }
     }
 
@@ -73,8 +171,12 @@ public final class RecipeDtos {
             BigDecimal kcal,
             BigDecimal protein,
             BigDecimal carbs,
-            BigDecimal fat
+            BigDecimal fat,
+            Map<String, BigDecimal> micros
     ) {
+        public LineUpsert {
+            micros = micros == null ? Map.of() : FoodNutrients.compact(micros);
+        }
     }
 
     public record RecipeUpsert(String name, BigDecimal servings) {
@@ -90,8 +192,13 @@ public final class RecipeDtos {
             BigDecimal kcal,
             BigDecimal protein,
             BigDecimal carbs,
-            BigDecimal fat
+            BigDecimal fat,
+            Map<String, BigDecimal> micros
     ) {
+        public LineView {
+            micros = micros == null ? Map.of() : micros;
+        }
+
         public static LineView from(FoodRecipeItem item) {
             return new LineView(
                     item.getId(),
@@ -103,7 +210,8 @@ public final class RecipeDtos {
                     item.getKcal(),
                     item.getProtein(),
                     item.getCarbs(),
-                    item.getFat()
+                    item.getFat(),
+                    FoodNutrients.fromStored(item.getMicros())
             );
         }
 
@@ -118,7 +226,8 @@ public final class RecipeDtos {
                     item.getKcal(),
                     item.getProtein(),
                     item.getCarbs(),
-                    item.getFat()
+                    item.getFat(),
+                    FoodNutrients.fromStored(item.getMicros())
             );
         }
 

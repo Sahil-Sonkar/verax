@@ -63,6 +63,10 @@ export function FocusTimer({
       void queryClient.invalidateQueries({ queryKey: ['today'] })
       void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       void queryClient.invalidateQueries({ queryKey: ['metrics'] })
+      void queryClient.invalidateQueries({ queryKey: ['habit-scores'] })
+      void queryClient.invalidateQueries({ queryKey: ['habit-series'] })
+      void queryClient.invalidateQueries({ queryKey: ['heatmap'] })
+      void queryClient.invalidateQueries({ queryKey: ['compare'] })
     },
   })
 
@@ -95,6 +99,10 @@ export function FocusTimer({
 
   const logged =
     kind === 'MEDITATION' ? (day.data?.meditationSeconds ?? 0) : (day.data?.readingSeconds ?? 0)
+  const sitHabits = (habits.data ?? []).filter((habit) => {
+    const name = habit.name.toLowerCase()
+    return name.includes('meditat') || name.includes('deep work')
+  })
 
   return (
     <section className={compact ? 'mt-4' : 'mt-10'}>
@@ -155,7 +163,7 @@ export function FocusTimer({
           onChange={(e) => setHabitId(e.target.value)}
         >
           <option value="">Linked metric only</option>
-          {habits.data?.map((habit) => (
+          {sitHabits.map((habit) => (
             <option key={habit.id} value={habit.id}>
               {habit.name}
             </option>

@@ -1,8 +1,10 @@
 package com.verax.analytics;
 
 import com.verax.category.Category;
+import com.verax.common.ApiException;
 import com.verax.completion.HabitCompletion;
 import com.verax.completion.HabitCompletionRepository;
+import com.verax.completion.CompletionStatus;
 import com.verax.config.VeraxProperties;
 import com.verax.consistency.ConsistencyCalculator;
 import com.verax.consistency.ConsistencyCalculator.DailyScore;
@@ -89,6 +91,67 @@ public class AnalyticsService {
     }
 
     @Transactional(readOnly = true)
+    public AnalyticsDtos.Tracker tracker(UUID userId, LocalDate from, LocalDate to) {
+        LocalDate today = today(userId);
+        LocalDate heatTo = to.isAfter(today) ? today : to;
+        LocalDate heatFrom = from.isAfter(heatTo) ? heatTo : from;
+        LocalDate trailStart = today.minusDays(6);
+        LocalDate loopStart = heatFrom.isBefore(trailStart) ? heatFrom : trailStart;
+        LocalDate loopEnd = heatTo.isAfter(today) ? heatTo : today;
+        LocalDate loadFrom = loopStart.minusDays(7);
+        List<Habit> tracked = habits.findRelevant(userId, loadFrom, loopEnd).stream()
+                .filter(habit -> habit.isTracked() && habit.isActive())
+                .toList();
+        List<HabitCompletion> all = completions.findInRange(userId, loadFrom, loopEnd);
+        List<AnalyticsDtos.HeatCell> cells = new ArrayList<>();
+        Map<UUID, List<AnalyticsDtos.TrailDay>> trails = new HashMap<>();
+        for (Habit habit : tracked) {
+            trails.put(habit.getId(), new ArrayList<>());
+        }
+        for (LocalDate date = loopStart; !date.isAfter(loopEnd); date = date.plusDays(1)) {
+            boolean inHeat = !date.isBefore(heatFrom) && !date.isAfter(heatTo);
+            boolean inTrail = !date.isBefore(trailStart) && !date.isAfter(today);
+            if (!inHeat && !inTrail) {
+                continue;
+            }
+            DailyScore day = ConsistencyCalculator.scoreDay(date, today, tracked, all);
+            double earned = 0;
+            int possible = 0;
+            Map<UUID, CompletionStatus> byHabit = new HashMap<>();
+            for (var contribution : day.contributions()) {
+                possible++;
+                earned += trackerEarned(contribution.status());
+                byHabit.put(contribution.habit().getId(), contribution.status());
+            }
+            if (!date.isBefore(heatFrom) && !date.isAfter(heatTo)) {
+                Double score = possible == 0 ? null : round(earned / possible);
+                int percent = score == null ? 0 : (int) Math.round(score * 100);
+                cells.add(new AnalyticsDtos.HeatCell(
+                        date,
+                        score,
+                        percent,
+                        trackerLevel(earned, possible),
+                        possible == 0 ? null : earned
+                ));
+            }
+            if (!date.isBefore(trailStart) && !date.isAfter(today)) {
+                for (Habit habit : tracked) {
+                    CompletionStatus status = byHabit.get(habit.getId());
+                    trails.get(habit.getId()).add(new AnalyticsDtos.TrailDay(
+                            date,
+                            status == null ? null : status.name()
+                    ));
+                }
+            }
+        }
+        List<AnalyticsDtos.HabitTrail> trailList = new ArrayList<>();
+        for (Habit habit : tracked) {
+            trailList.add(new AnalyticsDtos.HabitTrail(habit.getId(), trails.get(habit.getId())));
+        }
+        return new AnalyticsDtos.Tracker(cells, trailList);
+    }
+
+    @Transactional(readOnly = true)
     public AnalyticsDtos.Trends trends(UUID userId, String granularity, LocalDate from, LocalDate to) {
         List<DailyScore> days = scores(userId, from, to);
         List<AnalyticsDtos.Point> points = new ArrayList<>();
@@ -172,6 +235,35 @@ public class AnalyticsService {
     }
 
     @Transactional(readOnly = true)
+    public AnalyticsDtos.HabitSeries habitSeries(UUID userId, UUID habitId, LocalDate from, LocalDate to) {
+        Habit habit = habits.findByIdAndUserId(habitId, userId)
+                .orElseThrow(() -> ApiException.notFound("Habit not found"));
+        if (to.isBefore(from)) {
+            return new AnalyticsDtos.HabitSeries(habit.getId(), habit.getName(), habit.getUnit(), List.of());
+        }
+        Map<LocalDate, HabitCompletion> byDate = new HashMap<>();
+        for (HabitCompletion row : completions.findInRange(userId, from, to)) {
+            if (row.getHabit().getId().equals(habitId)) {
+                byDate.put(row.getDate(), row);
+            }
+        }
+        List<AnalyticsDtos.HabitPoint> points = new ArrayList<>();
+        for (LocalDate date = from; !date.isAfter(to); date = date.plusDays(1)) {
+            HabitCompletion row = byDate.get(date);
+            if (row == null) {
+                points.add(new AnalyticsDtos.HabitPoint(date, null, 0, null));
+                continue;
+            }
+            int percent = row.getStatus() == CompletionStatus.COMPLETED
+                    ? 100
+                    : row.getStatus() == CompletionStatus.PARTIAL ? 50 : 0;
+            Double value = row.getValue() == null ? null : row.getValue().doubleValue();
+            points.add(new AnalyticsDtos.HabitPoint(date, value, percent, row.getStatus().name()));
+        }
+        return new AnalyticsDtos.HabitSeries(habit.getId(), habit.getName(), habit.getUnit(), points);
+    }
+
+    @Transactional(readOnly = true)
     public AnalyticsDtos.Compare compare(UUID userId, String period) {
         LocalDate today = today(userId);
         LocalDate currentStart;
@@ -194,6 +286,13 @@ public class AnalyticsService {
                 previousEnd = LocalDate.of(today.getYear() - 1, 12, 31);
                 currentLabel = String.valueOf(today.getYear());
                 previousLabel = String.valueOf(today.getYear() - 1);
+            }
+            case "quarter" -> {
+                currentStart = quarterStart(today);
+                previousStart = currentStart.minusMonths(3);
+                previousEnd = currentStart.minusDays(1);
+                currentLabel = "Q" + quarterNumber(today) + " " + today.getYear();
+                previousLabel = "Q" + quarterNumber(previousStart) + " " + previousStart.getYear();
             }
             default -> {
                 currentStart = HabitScheduler.weekStart(today);
@@ -322,6 +421,15 @@ public class AnalyticsService {
         return cells;
     }
 
+    static LocalDate quarterStart(LocalDate day) {
+        int month = ((day.getMonthValue() - 1) / 3) * 3 + 1;
+        return LocalDate.of(day.getYear(), month, 1);
+    }
+
+    static int quarterNumber(LocalDate day) {
+        return ((day.getMonthValue() - 1) / 3) + 1;
+    }
+
     static int levelFor(int percent) {
         if (percent <= 0) {
             return 0;
@@ -339,6 +447,36 @@ public class AnalyticsService {
             return 4;
         }
         return 5;
+    }
+
+    static double trackerEarned(CompletionStatus status) {
+        if (status == CompletionStatus.COMPLETED) {
+            return 1;
+        }
+        if (status == CompletionStatus.PARTIAL) {
+            return 0.5;
+        }
+        return 0;
+    }
+
+    static int trackerLevel(double earned, int possible) {
+        if (possible <= 0 || earned <= 0) {
+            return 0;
+        }
+        if (earned >= possible) {
+            return 5;
+        }
+        double ratio = earned / possible;
+        if (ratio <= 0.25) {
+            return 1;
+        }
+        if (ratio <= 0.5) {
+            return 2;
+        }
+        if (ratio <= 0.75) {
+            return 3;
+        }
+        return 4;
     }
 
     private static List<DailyScore> filter(List<DailyScore> days, LocalDate from, LocalDate to) {

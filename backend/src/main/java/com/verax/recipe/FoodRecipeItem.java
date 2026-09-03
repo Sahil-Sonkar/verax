@@ -9,8 +9,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -51,6 +55,10 @@ public class FoodRecipeItem {
 
     @Column(nullable = false)
     private BigDecimal fat = BigDecimal.ZERO;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private Map<String, Double> micros = new LinkedHashMap<>();
 
     public UUID getId() {
         return id;
@@ -134,5 +142,13 @@ public class FoodRecipeItem {
 
     public void setFat(BigDecimal fat) {
         this.fat = fat;
+    }
+
+    public Map<String, Double> getMicros() {
+        return micros;
+    }
+
+    public void setMicros(Map<String, Double> micros) {
+        this.micros = micros == null ? new LinkedHashMap<>() : micros;
     }
 }

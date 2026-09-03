@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -48,6 +49,69 @@ public class AutoCompleteService {
     @Transactional
     public void completeHabit(UUID userId, Habit habit, LocalDate date, BigDecimal value, String note) {
         upsert(userId, habit, date, CompletionStatus.COMPLETED, value, note);
+    }
+
+    /**
+     * Marks every active habit whose name contains one of {@code needles} (pipe-separated).
+     * Threshold is autoCompleteThreshold, else targetValue, else {@code fallback}.
+     * Unit {@code session} always uses {@code fallback} so a 45-minute workout is not compared to "1 session".
+     */
+    @Transactional
+    public boolean applyNamed(
+            UUID userId,
+            LocalDate date,
+            String needles,
+            BigDecimal value,
+            BigDecimal fallback,
+            String note
+    ) {
+        if (date == null || value == null || needles == null || needles.isBlank()) {
+            return false;
+        }
+        boolean updated = false;
+        for (Habit habit : habits.findByUserIdAndActiveTrueOrderBySectionAscNameAsc(userId)) {
+            if (!habit.isInWindow(date) || !nameMatches(habit.getName(), needles)) {
+                continue;
+            }
+            BigDecimal threshold = thresholdFor(habit, fallback);
+            if (threshold == null) {
+                continue;
+            }
+            CompletionStatus next = statusFor(value, threshold);
+            if (next == null) {
+                continue;
+            }
+            upsert(userId, habit, date, next, value, note);
+            updated = true;
+        }
+        return updated;
+    }
+
+    static boolean nameMatches(String name, String needles) {
+        if (name == null || needles == null) {
+            return false;
+        }
+        String hay = name.toLowerCase(Locale.ROOT);
+        for (String part : needles.toLowerCase(Locale.ROOT).split("\\|")) {
+            if (!part.isBlank() && hay.contains(part.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static BigDecimal thresholdFor(Habit habit, BigDecimal fallback) {
+        String unit = habit.getUnit() == null ? "" : habit.getUnit().toLowerCase(Locale.ROOT);
+        if ("session".equals(unit) || "sessions".equals(unit)) {
+            return fallback;
+        }
+        if (habit.getAutoCompleteThreshold() != null) {
+            return habit.getAutoCompleteThreshold();
+        }
+        if (habit.getTargetValue() != null) {
+            return habit.getTargetValue();
+        }
+        return fallback;
     }
 
     private void upsert(

@@ -48,6 +48,9 @@ public class Habit {
     @Column(length = 64)
     private String icon;
 
+    @Column(nullable = false)
+    private boolean tracked = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private HabitSection section = HabitSection.GROWTH;
@@ -160,6 +163,14 @@ public class Habit {
 
     public void setIcon(String icon) {
         this.icon = icon;
+    }
+
+    public boolean isTracked() {
+        return tracked;
+    }
+
+    public void setTracked(boolean tracked) {
+        this.tracked = tracked;
     }
 
     public HabitSection getSection() {

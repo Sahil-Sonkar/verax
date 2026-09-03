@@ -33,7 +33,28 @@ public class RecipeController {
 
     @GetMapping("/foods/search")
     public List<RecipeDtos.FoodHit> search(@RequestParam String q) {
-        return recipes.searchFoods(q);
+        return recipes.searchFoods(currentUser.id(), q);
+    }
+
+    @GetMapping("/foods")
+    public List<RecipeDtos.UserFoodView> listFoods() {
+        return recipes.listFoods(currentUser.id());
+    }
+
+    @PostMapping("/foods")
+    public RecipeDtos.UserFoodView createFood(@RequestBody RecipeDtos.UserFoodUpsert request) {
+        return recipes.createFood(currentUser.id(), request);
+    }
+
+    @PatchMapping("/foods/{id}")
+    public RecipeDtos.UserFoodView updateFood(@PathVariable UUID id, @RequestBody RecipeDtos.UserFoodUpsert request) {
+        return recipes.updateFood(currentUser.id(), id, request);
+    }
+
+    @DeleteMapping("/foods/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteFood(@PathVariable UUID id) {
+        recipes.deleteFood(currentUser.id(), id);
     }
 
     @GetMapping("/recipes")

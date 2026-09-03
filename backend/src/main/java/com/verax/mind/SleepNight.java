@@ -139,4 +139,47 @@ public class SleepNight {
     public int totalMin() {
         return awakeMin + remMin + coreMin + deepMin;
     }
+
+    /** Hours slept: staged minutes (awake excluded), else clock span from start/end. */
+    public double sleptHours() {
+        int stages = remMin + coreMin + deepMin;
+        if (stages > 0) {
+            return stages / 60.0;
+        }
+        int clock = clockSpanMin();
+        if (clock > 0) {
+            return clock / 60.0;
+        }
+        return totalMin() / 60.0;
+    }
+
+    int clockSpanMin() {
+        Integer start = parseHm(startTime);
+        Integer end = parseHm(endTime);
+        if (start == null || end == null) {
+            return 0;
+        }
+        int span = end - start;
+        return span <= 0 ? span + 24 * 60 : span;
+    }
+
+    static Integer parseHm(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String[] parts = raw.trim().split(":");
+        if (parts.length < 2) {
+            return null;
+        }
+        try {
+            int hour = Integer.parseInt(parts[0]);
+            int minute = Integer.parseInt(parts[1]);
+            if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+                return null;
+            }
+            return hour * 60 + minute;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
 }

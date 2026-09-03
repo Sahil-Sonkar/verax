@@ -12,7 +12,19 @@ public final class AnalyticsDtos {
     public record NamedScore(UUID id, String name, String color, double score, int percent) {
     }
 
-    public record HeatCell(LocalDate date, Double score, int percent, int level) {
+    public record HeatCell(LocalDate date, Double score, int percent, int level, Double completed) {
+        public HeatCell(LocalDate date, Double score, int percent, int level) {
+            this(date, score, percent, level, null);
+        }
+    }
+
+    public record TrailDay(LocalDate date, String status) {
+    }
+
+    public record HabitTrail(UUID habitId, List<TrailDay> days) {
+    }
+
+    public record Tracker(List<HeatCell> heatmap, List<HabitTrail> trails) {
     }
 
     public record Point(String label, LocalDate start, Double score, int percent) {
@@ -43,6 +55,12 @@ public final class AnalyticsDtos {
             String currentLabel,
             String previousLabel
     ) {
+    }
+
+    public record HabitPoint(LocalDate date, Double value, int percent, String status) {
+    }
+
+    public record HabitSeries(UUID habitId, String name, String unit, List<HabitPoint> points) {
     }
 
     public record WeeklyReview(

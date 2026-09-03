@@ -253,12 +253,12 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
   const [to, setTo] = useState(`${year}-12`)
   const holdings = useQuery({
     queryKey: ['holdings'],
-    queryFn: () => api<Holding[]>('/api/finance/holdings'),
+    queryFn: () => api<Holding[]>('/api/money/holdings'),
     refetchInterval: 60_000,
   })
   const workbook = useQuery({
     queryKey: ['workbook', from, to],
-    queryFn: () => api<Workbook>(`/api/finance/workbook?from=${from}&to=${to}`),
+    queryFn: () => api<Workbook>(`/api/money/workbook?from=${from}&to=${to}`),
   })
   const [open, setOpen] = useState(false)
   const [addLine, setAddLine] = useState(false)
@@ -337,7 +337,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
   async function saveCategory(from: string, raw: string) {
     const to = raw.trim()
     if (!to || to === from) return
-    await api('/api/finance/workbook/category', {
+    await api('/api/money/workbook/category', {
       method: 'PATCH',
       body: JSON.stringify({ from, to }),
     })
@@ -353,7 +353,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
   }
 
   function toggleCat(key: string) {
-    setOpenCats((current) => ({ ...current, [key]: current[key] === false }))
+    setOpenCats((current) => ({ ...current, [key]: !current[key] }))
   }
 
   function openAddLine(category = '', kind = 'EXPENSE') {
@@ -406,7 +406,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
 
   function renderGroups(groups: { key: string; category: string; items: WorkbookItem[] }[]) {
     return groups.map((group) => {
-      const open = openCats[group.key] !== false
+      const open = openCats[group.key] === true
       const kind = group.items[0]?.kind ?? 'EXPENSE'
       const tone = rowTone(kind, group.category)
       const Chevron = open ? ChevronDown : ChevronRight
@@ -495,7 +495,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
 
   function monthListGroups(groups: { key: string; category: string; items: WorkbookItem[] }[]) {
     return groups.map((group) => {
-      const open = openCats[group.key] !== false
+      const open = openCats[group.key] === true
       const kind = group.items[0]?.kind ?? 'EXPENSE'
       const tone = rowTone(kind, group.category)
       const Chevron = open ? ChevronDown : ChevronRight
@@ -598,17 +598,13 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <AddButton label="Add line" onClick={() => openAddLine()} />
             <AddButton label="Add holding" variant="primary" onClick={() => setOpen(true)} />
           </div>
         </div>
       )}
-      {section !== 'all' && (
+      {section !== 'all' && showInvest && (
         <div className="flex flex-wrap justify-end gap-2">
-          {showBudget && (
-            <AddButton label="Add line" onClick={() => openAddLine()} />
-          )}
-          {showInvest && <AddButton label="Add holding" variant="primary" onClick={() => setOpen(true)} />}
+          <AddButton label="Add holding" variant="primary" onClick={() => setOpen(true)} />
         </div>
       )}
 
@@ -782,24 +778,46 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
       )}
 
       {showBudget && (
+        <div className="flex items-center gap-2 overflow-x-auto text-sm">
+          <label className="flex shrink-0 items-center gap-2 text-[var(--muted)]">
+            From
+            <input
+              className="field w-auto py-1.5"
+              type="month"
+              value={from}
+              onChange={(event) => {
+                const next = event.target.value
+                setFrom(next)
+                if (next > to) setTo(next)
+              }}
+            />
+          </label>
+          <label className="flex shrink-0 items-center gap-2 text-[var(--muted)]">
+            To
+            <input
+              className="field w-auto py-1.5"
+              type="month"
+              value={to}
+              onChange={(event) => {
+                const next = event.target.value
+                setTo(next)
+                if (next < from) setFrom(next)
+              }}
+            />
+          </label>
+          <button type="button" className="glass-btn shrink-0 px-3 py-1.5 text-sm" onClick={() => setTo(nextMonth(to))}>
+            Add month
+          </button>
+          <AddButton className="shrink-0" label="Add line" onClick={() => openAddLine()} />
+        </div>
+      )}
+
+      {showBudget && (
         <div className="panel">
           <section className="card overflow-hidden p-0">
             <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--line)] px-4 py-4 sm:px-6">
               <h2 className="text-2xl tracking-tight">Budget</h2>
               <div className="flex flex-wrap items-center gap-2 text-sm">
-                <div className="hidden items-center gap-2 lg:flex">
-                  <label className="flex items-center gap-2 text-[var(--muted)]">
-                    From
-                    <input className="field w-auto py-1.5" type="month" value={from} onChange={(event) => setFrom(event.target.value)} />
-                  </label>
-                  <label className="flex items-center gap-2 text-[var(--muted)]">
-                    To
-                    <input className="field w-auto py-1.5" type="month" value={to} onChange={(event) => setTo(event.target.value)} />
-                  </label>
-                  <button type="button" className="glass-btn px-3 py-1.5 text-sm" onClick={() => setTo(nextMonth(to))}>
-                    Add month
-                  </button>
-                </div>
                 <button
                   type="button"
                   className={budgetEdit ? 'glass-primary px-3 py-1.5 text-sm' : 'glass-btn px-3 py-1.5 text-sm'}
@@ -845,19 +863,6 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
                   {monthSummary('Total to Receive', totals[activeMonth]?.income)}
                   {monthSummary('Balance', totals[activeMonth]?.balance, true)}
                   {monthSummary('Running Balance', totals[activeMonth]?.running)}
-                  <div className="flex justify-end px-4 py-3">
-                    <button
-                      type="button"
-                      className="glass-btn px-3 py-1.5 text-sm"
-                      onClick={() => {
-                        const next = nextMonth(to)
-                        setTo(next)
-                        setFocusMonth(next)
-                      }}
-                    >
-                      Add month
-                    </button>
-                  </div>
                 </div>
                 <div className="hidden overflow-x-auto lg:block">
                   <table className="data-table text-sm">
@@ -903,8 +908,8 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
               </>
             )}
             <p className="px-4 py-3 text-xs text-[var(--muted)] sm:px-6">
-              Running balance is 0 in the first month, then adds each later month surplus, same as your sheet. Add month
-              to keep going past this year.
+              Running is 0 in the first month you logged, then adds each later surplus. The range above only changes what
+              you see.
             </p>
           </section>
         </div>
@@ -973,7 +978,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
             onSubmit={async (event) => {
               event.preventDefault()
               const symbol = (ticker || name).trim().toUpperCase()
-              await api('/api/finance/holdings', {
+              await api('/api/money/holdings', {
                 method: 'POST',
                 body: JSON.stringify({
                   name: name.trim() || symbol,
@@ -1039,7 +1044,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
             className="mt-4 space-y-3"
             onSubmit={async (event) => {
               event.preventDefault()
-              await api('/api/finance/workbook/items', {
+              await api('/api/money/workbook/items', {
                 method: 'POST',
                 body: JSON.stringify({ category: lineCategory, name: lineName, kind: lineKind }),
               })
@@ -1158,13 +1163,13 @@ function LineEditDialog({
           setSaving(true)
           try {
             if (nextName !== item.name || nextCategory !== item.category || kind !== item.kind) {
-              await api(`/api/finance/workbook/items/${item.id}`, {
+              await api(`/api/money/workbook/items/${item.id}`, {
                 method: 'PATCH',
                 body: JSON.stringify({ name: nextName, category: nextCategory, kind }),
               })
             }
             if (!sameAmount(item.amounts[month], next)) {
-              await api('/api/finance/workbook/cell', {
+              await api('/api/money/workbook/cell', {
                 method: 'PATCH',
                 body: JSON.stringify({ itemId: item.id, month, amount: next }),
               })
@@ -1222,7 +1227,7 @@ function LineEditDialog({
           <TrashButton
             label={`Delete ${item.name}`}
             onClick={async () => {
-              await api(`/api/finance/workbook/items/${item.id}`, { method: 'DELETE' })
+              await api(`/api/money/workbook/items/${item.id}`, { method: 'DELETE' })
               void queryClient.invalidateQueries({ queryKey: ['workbook'] })
               onClose()
             }}
@@ -1255,7 +1260,7 @@ function HoldingEditDialog({ row, onClose }: { row: Holding; onClose: () => void
           if (!symbol) return
           setSaving(true)
           try {
-            await api(`/api/finance/holdings/${row.id}`, {
+            await api(`/api/money/holdings/${row.id}`, {
               method: 'PATCH',
               body: JSON.stringify({
                 ticker: symbol,
@@ -1306,7 +1311,7 @@ function HoldingEditDialog({ row, onClose }: { row: Holding; onClose: () => void
           <TrashButton
             label={`Delete ${row.ticker || row.name}`}
             onClick={async () => {
-              await api(`/api/finance/holdings/${row.id}`, { method: 'DELETE' })
+              await api(`/api/money/holdings/${row.id}`, { method: 'DELETE' })
               void queryClient.invalidateQueries({ queryKey: ['holdings'] })
               onClose()
             }}
@@ -1341,7 +1346,7 @@ function RunningBalanceChart({ months, totals }: { months: string[]; totals: Rec
         <div>
           <h2 className="text-2xl tracking-tight">Running</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            Accumulated surplus after the first month, same as the sheet.
+            Zero in the first month you logged. Later months keep adding surplus — the range does not restart it.
           </p>
         </div>
         <div className="text-right">

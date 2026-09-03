@@ -25,6 +25,7 @@ export type Habit = {
   name: string
   description?: string
   icon?: string
+  tracked?: boolean
   category?: Category
   section: HabitSection
   frequencyType: FrequencyType
@@ -97,6 +98,17 @@ export type HeatCell = {
   score?: number
   percent: number
   level: number
+  completed?: number
+}
+
+export type HabitTrail = {
+  habitId: string
+  days: { date: string; status?: string }[]
+}
+
+export type Tracker = {
+  heatmap: HeatCell[]
+  trails: HabitTrail[]
 }
 
 export type Dashboard = {
@@ -117,6 +129,20 @@ export type TrendPoint = {
   start: string
   score?: number
   percent: number
+}
+
+export type HabitPoint = {
+  date: string
+  value?: number
+  percent: number
+  status?: string
+}
+
+export type HabitSeries = {
+  habitId: string
+  name: string
+  unit?: string
+  points: HabitPoint[]
 }
 
 export type Compare = {
@@ -421,6 +447,23 @@ export type FoodHit = {
   fat: number
   per: string
   servings?: FoodServing[]
+  micros?: Record<string, number>
+  defaultServings?: number
+}
+
+export type UserFood = {
+  id: string
+  name: string
+  brand?: string | null
+  kcal: number
+  protein: number
+  carbs: number
+  fat: number
+  per: string
+  servingAmount: number
+  servingUnit: string
+  servings: number
+  micros?: Record<string, number>
 }
 
 export type FoodLine = {
@@ -434,6 +477,7 @@ export type FoodLine = {
   protein: number
   carbs: number
   fat: number
+  micros?: Record<string, number>
 }
 
 export type Recipe = {
@@ -815,4 +859,34 @@ export type PriceQuote = {
   currency: string
   source: string
   usd?: number
+}
+
+export type ContentPlatform = 'YOUTUBE' | 'INSTAGRAM' | 'LINKEDIN'
+export type ContentPhase = 'IDEA' | 'HAPPENED' | 'LEARNED' | 'PLATFORM' | 'HOOK'
+
+export type SocialMetric = {
+  key: string
+  name: string
+  unit?: string
+  latest?: number
+  latestDate?: string
+  series: { date: string; value: number }[]
+}
+
+export type PlatformStats = {
+  platform: string
+  label: string
+  metrics: SocialMetric[]
+}
+
+export type ContentIdea = {
+  id: string
+  platform: ContentPlatform
+  phase: ContentPhase
+  idea: string
+  happened?: string
+  learned?: string
+  potentialPlatform?: string
+  hook?: string
+  updatedAt: string
 }

@@ -1,6 +1,7 @@
 package com.verax.recipe;
 
 import com.verax.common.ApiException;
+import com.verax.habit.AutoCompleteService;
 import com.verax.train.TrainDtos;
 import com.verax.train.TrainService;
 import com.verax.user.User;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
@@ -34,6 +36,8 @@ public class RecipeService {
     private final UserRepository users;
     private final FoodSearchService search;
     private final TrainService train;
+    private final AutoCompleteService autoComplete;
+    private final UserFoodRepository foods;
 
     public RecipeService(
             FoodRecipeRepository recipes,
@@ -45,7 +49,9 @@ public class RecipeService {
             FuelSupplementLogRepository supplementLogs,
             UserRepository users,
             FoodSearchService search,
-            TrainService train
+            TrainService train,
+            AutoCompleteService autoComplete,
+            UserFoodRepository foods
     ) {
         this.recipes = recipes;
         this.recipeItems = recipeItems;
@@ -57,10 +63,46 @@ public class RecipeService {
         this.users = users;
         this.search = search;
         this.train = train;
+        this.autoComplete = autoComplete;
+        this.foods = foods;
     }
 
-    public List<RecipeDtos.FoodHit> searchFoods(String query) {
-        return search.search(query);
+    public List<RecipeDtos.FoodHit> searchFoods(UUID userId, String query) {
+        List<RecipeDtos.FoodHit> hits = new ArrayList<>();
+        if (query != null && !query.isBlank()) {
+            for (UserFood food : foods.findByUserIdAndNameContainingIgnoreCase(userId, query.trim())) {
+                hits.add(RecipeDtos.UserFoodView.from(food).toHit());
+            }
+        }
+        hits.addAll(search.search(query));
+        return hits.size() <= 16 ? hits : hits.subList(0, 16);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RecipeDtos.UserFoodView> listFoods(UUID userId) {
+        return foods.findByUserIdOrderByNameAsc(userId).stream().map(RecipeDtos.UserFoodView::from).toList();
+    }
+
+    @Transactional
+    public RecipeDtos.UserFoodView createFood(UUID userId, RecipeDtos.UserFoodUpsert request) {
+        UserFood food = new UserFood();
+        food.setUser(users.getReferenceById(userId));
+        applyFood(food, request, true);
+        foods.save(food);
+        return RecipeDtos.UserFoodView.from(food);
+    }
+
+    @Transactional
+    public RecipeDtos.UserFoodView updateFood(UUID userId, UUID id, RecipeDtos.UserFoodUpsert request) {
+        UserFood food = foods.findByIdAndUserId(id, userId).orElseThrow(() -> ApiException.notFound("Food not found"));
+        applyFood(food, request, false);
+        return RecipeDtos.UserFoodView.from(food);
+    }
+
+    @Transactional
+    public void deleteFood(UUID userId, UUID id) {
+        UserFood food = foods.findByIdAndUserId(id, userId).orElseThrow(() -> ApiException.notFound("Food not found"));
+        foods.delete(food);
     }
 
     @Transactional
@@ -123,6 +165,7 @@ public class RecipeService {
             item.setProtein(scale(item.getProtein(), factor));
             item.setCarbs(scale(item.getCarbs(), factor));
             item.setFat(scale(item.getFat(), factor));
+            item.setMicros(FoodNutrients.scaleStored(item.getMicros(), factor));
         }
         if (request.name() != null && !request.name().isBlank()) {
             item.setName(request.name().trim());
@@ -138,6 +181,9 @@ public class RecipeService {
         }
         if (request.fat() != null) {
             item.setFat(nvl(request.fat()));
+        }
+        if (request.micros() != null && !request.micros().isEmpty()) {
+            item.setMicros(FoodNutrients.toStored(request.micros()));
         }
         if (request.grams() != null && (request.kcal() != null || item.getGrams() == null || item.getGrams().signum() == 0)) {
             item.setGrams(nvl(request.grams()));
@@ -198,6 +244,14 @@ public class RecipeService {
             row.setMilliliters(next);
             water.save(row);
         }
+        autoComplete.applyNamed(
+                userId,
+                request.date(),
+                "water",
+                BigDecimal.valueOf(next).divide(BigDecimal.valueOf(1000), 2, RoundingMode.HALF_UP),
+                BigDecimal.valueOf(3),
+                "Fuel water"
+        );
         return day(userId, request.date());
     }
 
@@ -307,6 +361,7 @@ public class RecipeService {
                 copy.setProtein(source.getProtein());
                 copy.setCarbs(source.getCarbs());
                 copy.setFat(source.getFat());
+                copy.setMicros(source.getMicros() == null ? Map.of() : new LinkedHashMap<>(source.getMicros()));
                 meal.getItems().add(copy);
             }
         } else {
@@ -367,6 +422,7 @@ public class RecipeService {
             item.setProtein(scale(item.getProtein(), factor));
             item.setCarbs(scale(item.getCarbs(), factor));
             item.setFat(scale(item.getFat(), factor));
+            item.setMicros(FoodNutrients.scaleStored(item.getMicros(), factor));
         }
         if (request.name() != null && !request.name().isBlank()) {
             item.setName(request.name().trim());
@@ -382,6 +438,9 @@ public class RecipeService {
         }
         if (request.fat() != null) {
             item.setFat(nvl(request.fat()));
+        }
+        if (request.micros() != null && !request.micros().isEmpty()) {
+            item.setMicros(FoodNutrients.toStored(request.micros()));
         }
         if (request.grams() != null && (request.kcal() != null || item.getGrams() == null || item.getGrams().signum() == 0)) {
             item.setGrams(nvl(request.grams()));
@@ -418,6 +477,54 @@ public class RecipeService {
     private FuelSupplement supplementOn(UUID userId, UUID id) {
         return supplements.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> ApiException.notFound("Supplement not found"));
+    }
+
+    private static void applyFood(UserFood food, RecipeDtos.UserFoodUpsert request, boolean creating) {
+        if (request == null || request.name() == null || request.name().isBlank()) {
+            if (creating) {
+                throw ApiException.badRequest("Food name is required");
+            }
+        } else {
+            food.setName(request.name().trim());
+        }
+        if (request != null && (creating || request.brand() != null)) {
+            food.setBrand(blankToNull(request.brand()));
+        }
+        if (request != null && (creating || request.servingAmount() != null || request.servings() != null || request.servingUnit() != null)) {
+            food.setServingAmount(
+                    request.servingAmount() == null || request.servingAmount().signum() <= 0
+                            ? BigDecimal.valueOf(100)
+                            : request.servingAmount()
+            );
+            food.setServingUnit(RecipeDtos.LineView.measure(request.servingUnit()));
+            food.setServings(
+                    request.servings() == null || request.servings().signum() <= 0
+                            ? BigDecimal.ONE
+                            : request.servings()
+            );
+        }
+        BigDecimal grams = FoodNutrients.portionGrams(food.getServingAmount(), food.getServings());
+        if (request != null && (creating || request.kcal() != null)) {
+            food.setKcal(FoodNutrients.toPer100(nvl(request.kcal()), grams));
+        }
+        if (request != null && (creating || request.protein() != null)) {
+            food.setProtein(FoodNutrients.toPer100(nvl(request.protein()), grams));
+        }
+        if (request != null && (creating || request.carbs() != null)) {
+            food.setCarbs(FoodNutrients.toPer100(nvl(request.carbs()), grams));
+        }
+        if (request != null && (creating || request.fat() != null)) {
+            food.setFat(FoodNutrients.toPer100(nvl(request.fat()), grams));
+        }
+        if (request != null && (creating || request.micros() != null)) {
+            BigDecimal factor = grams.signum() <= 0
+                    ? BigDecimal.ONE
+                    : BigDecimal.valueOf(100).divide(grams, 8, RoundingMode.HALF_UP);
+            food.setMicros(FoodNutrients.toStored(FoodNutrients.scale(FoodNutrients.compact(request.micros()), factor)));
+        }
+        if (food.getName() == null || food.getName().isBlank()) {
+            throw ApiException.badRequest("Food name is required");
+        }
     }
 
     private static String blankToNull(String value) {
@@ -458,6 +565,7 @@ public class RecipeService {
         item.setProtein(nvl(request.protein()));
         item.setCarbs(nvl(request.carbs()));
         item.setFat(nvl(request.fat()));
+        item.setMicros(FoodNutrients.toStored(request.micros()));
     }
 
     private static void apply(MealLogItem item, RecipeDtos.LineUpsert request) {
@@ -473,6 +581,7 @@ public class RecipeService {
         item.setProtein(nvl(request.protein()));
         item.setCarbs(nvl(request.carbs()));
         item.setFat(nvl(request.fat()));
+        item.setMicros(FoodNutrients.toStored(request.micros()));
     }
 
     private static BigDecimal nvl(BigDecimal value) {

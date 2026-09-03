@@ -107,13 +107,13 @@ export function FinancePage() {
     void queryClient.invalidateQueries({ queryKey: ['fin-portfolio'] })
   }
 
-  const accounts = useQuery({ queryKey: ['fin-accounts'], queryFn: () => api<FinanceAccount[]>('/api/finance/accounts') })
-  const loans = useQuery({ queryKey: ['fin-loans'], queryFn: () => api<FinanceLoan[]>('/api/finance/loans') })
-  const tax = useQuery({ queryKey: ['fin-tax', year], queryFn: () => api<TaxItem[]>(`/api/finance/tax?year=${year}`) })
-  const portfolio = useQuery({ queryKey: ['fin-portfolio'], queryFn: () => api<Portfolio>('/api/finance/portfolio') })
+  const accounts = useQuery({ queryKey: ['fin-accounts'], queryFn: () => api<FinanceAccount[]>('/api/money/accounts') })
+  const loans = useQuery({ queryKey: ['fin-loans'], queryFn: () => api<FinanceLoan[]>('/api/money/loans') })
+  const tax = useQuery({ queryKey: ['fin-tax', year], queryFn: () => api<TaxItem[]>(`/api/money/tax?year=${year}`) })
+  const portfolio = useQuery({ queryKey: ['fin-portfolio'], queryFn: () => api<Portfolio>('/api/money/portfolio') })
   const compare = useQuery({
     queryKey: ['fin-tax-compare', year, income],
-    queryFn: () => api<TaxCompare>(`/api/finance/tax/compare?year=${year}&income=${Number(income) || 0}`),
+    queryFn: () => api<TaxCompare>(`/api/money/tax/compare?year=${year}&income=${Number(income) || 0}`),
     enabled: tab === 'tax' && Number(income) > 0,
   })
 
@@ -121,12 +121,12 @@ export function FinancePage() {
     <div className="space-y-8">
       <div>
         <p className="kicker">Ledgers</p>
-        <h1 className="mt-2 text-5xl tracking-tight">Finance</h1>
+        <h1 className="mt-2 text-5xl tracking-tight">Money</h1>
         <p className="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-[var(--muted)]">
           Live prices from Google Finance. Budget stays a workbook.
         </p>
       </div>
-      <div className="flex gap-1 overflow-x-auto border-b border-[var(--line)]" role="tablist" aria-label="Finance">
+      <div className="flex gap-1 overflow-x-auto border-b border-[var(--line)]" role="tablist" aria-label="Money">
         {TABS.map((item) => (
           <button
             key={item.id}
@@ -149,7 +149,7 @@ export function FinancePage() {
             className="flex flex-wrap items-end gap-2"
             onSubmit={async (event) => {
               event.preventDefault()
-              setQuote(await api<PriceQuote>(`/api/finance/quote?kind=${quoteKind}&q=${encodeURIComponent(quoteQ)}`))
+              setQuote(await api<PriceQuote>(`/api/money/quote?kind=${quoteKind}&q=${encodeURIComponent(quoteQ)}`))
             }}
           >
             <select className="field w-auto" value={quoteKind} onChange={(event) => setQuoteKind(event.target.value)}>
@@ -181,7 +181,7 @@ export function FinancePage() {
             setOpen(true)
           }}
           onRemove={async (id) => {
-            await api(`/api/finance/accounts/${id}`, { method: 'DELETE' })
+            await api(`/api/money/accounts/${id}`, { method: 'DELETE' })
             void queryClient.invalidateQueries({ queryKey: ['fin-accounts'] })
             void queryClient.invalidateQueries({ queryKey: ['fin-portfolio'] })
           }}
@@ -202,15 +202,15 @@ export function FinancePage() {
             setLoanOpen(true)
           }}
           onRemove={async (id) => {
-            await api(`/api/finance/loans/${id}`, { method: 'DELETE' })
+            await api(`/api/money/loans/${id}`, { method: 'DELETE' })
             refreshLoans()
           }}
           onPay={async (id) => {
-            await api(`/api/finance/loans/${id}/pay`, { method: 'POST' })
+            await api(`/api/money/loans/${id}/pay`, { method: 'POST' })
             refreshLoans()
           }}
           onSkip={async (id) => {
-            await api(`/api/finance/loans/${id}/skip`, { method: 'POST' })
+            await api(`/api/money/loans/${id}/skip`, { method: 'POST' })
             refreshLoans()
           }}
           onAddPayment={(loan) =>
@@ -229,7 +229,7 @@ export function FinancePage() {
             })
           }
           onDeletePayment={async (loanId, paymentId) => {
-            await api(`/api/finance/loans/${loanId}/payments/${paymentId}`, { method: 'DELETE' })
+            await api(`/api/money/loans/${loanId}/payments/${paymentId}`, { method: 'DELETE' })
             refreshLoans()
           }}
           onAddInstallment={(loan) =>
@@ -248,7 +248,7 @@ export function FinancePage() {
             })
           }
           onDeleteInstallment={async (loanId, installmentId) => {
-            await api(`/api/finance/loans/${loanId}/installments/${installmentId}`, { method: 'DELETE' })
+            await api(`/api/money/loans/${loanId}/installments/${installmentId}`, { method: 'DELETE' })
             refreshLoans()
           }}
         />
@@ -302,7 +302,7 @@ export function FinancePage() {
                   <TrashButton
                     label="Delete deduction"
                     onClick={async () => {
-                      await api(`/api/finance/tax/${item.id}`, { method: 'DELETE' })
+                      await api(`/api/money/tax/${item.id}`, { method: 'DELETE' })
                       void queryClient.invalidateQueries({ queryKey: ['fin-tax'] })
                       void queryClient.invalidateQueries({ queryKey: ['fin-tax-compare'] })
                     }}
@@ -330,13 +330,13 @@ export function FinancePage() {
             onSubmit={async (event) => {
               event.preventDefault()
               if (tab === 'accounts') {
-                await api('/api/finance/accounts', {
+                await api('/api/money/accounts', {
                   method: 'POST',
                   body: JSON.stringify({ name, kind, balance: Number(amount) || 0, currency: 'INR' }),
                 })
                 void queryClient.invalidateQueries({ queryKey: ['fin-accounts'] })
               } else {
-                await api('/api/finance/tax', {
+                await api('/api/money/tax', {
                   method: 'POST',
                   body: JSON.stringify({ taxYear: year, name, kind, amount: Number(amount) || 0 }),
                 })
@@ -379,12 +379,12 @@ export function FinancePage() {
               event.preventDefault()
               const body = { dueDate: paymentForm.date || null, emi: numOrNull(paymentForm.amount) }
               if (paymentForm.payment) {
-                await api(`/api/finance/loans/${paymentForm.loanId}/payments/${paymentForm.payment.id}`, {
+                await api(`/api/money/loans/${paymentForm.loanId}/payments/${paymentForm.payment.id}`, {
                   method: 'PATCH',
                   body: JSON.stringify(body),
                 })
               } else {
-                await api(`/api/finance/loans/${paymentForm.loanId}/payments`, {
+                await api(`/api/money/loans/${paymentForm.loanId}/payments`, {
                   method: 'POST',
                   body: JSON.stringify(body),
                 })
@@ -426,12 +426,12 @@ export function FinancePage() {
               event.preventDefault()
               const body = { dueDate: installmentForm.date, amount: numOrNull(installmentForm.amount) }
               if (installmentForm.installment) {
-                await api(`/api/finance/loans/${installmentForm.loanId}/installments/${installmentForm.installment.id}`, {
+                await api(`/api/money/loans/${installmentForm.loanId}/installments/${installmentForm.installment.id}`, {
                   method: 'PATCH',
                   body: JSON.stringify(body),
                 })
               } else {
-                await api(`/api/finance/loans/${installmentForm.loanId}/installments`, {
+                await api(`/api/money/loans/${installmentForm.loanId}/installments`, {
                   method: 'POST',
                   body: JSON.stringify(body),
                 })
@@ -472,7 +472,7 @@ export function FinancePage() {
             onSubmit={async (event) => {
               event.preventDefault()
               const body = loanPayload(loanDraft)
-              await api(editingLoanId ? `/api/finance/loans/${editingLoanId}` : '/api/finance/loans', {
+              await api(editingLoanId ? `/api/money/loans/${editingLoanId}` : '/api/money/loans', {
                 method: editingLoanId ? 'PATCH' : 'POST',
                 body: JSON.stringify(body),
               })

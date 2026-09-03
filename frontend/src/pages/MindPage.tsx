@@ -5,6 +5,7 @@ import { AmbientPlayer } from '../components/AmbientPlayer'
 import { Dialog, PrimaryButton } from '../components/Dialog'
 import { FocusTimer } from '../components/FocusTimer'
 import { MindJournal } from '../components/MindJournal'
+import { TrashButton } from '../components/IconButtons'
 import { api } from '../lib/api'
 import type { SleepSummary } from '../types'
 
@@ -18,6 +19,13 @@ type Tab = (typeof TABS)[number]['id']
 
 function today() {
   return new Intl.DateTimeFormat('en-CA').format(new Date())
+}
+
+function nightLabel(date: string) {
+  const [year, month, day] = date.split('-').map(Number)
+  return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(
+    new Date(year, (month ?? 1) - 1, day ?? 1),
+  )
 }
 
 function rangeFor(period: 'day' | 'month' | 'quarter' | 'year') {
@@ -187,6 +195,31 @@ function SleepPanel() {
           </ResponsiveContainer>
         </div>
       </div>
+      {sleep.data && sleep.data.nights.length === 0 && (
+        <p className="text-sm text-[var(--muted)]">No nights in this range.</p>
+      )}
+      {sleep.data && sleep.data.nights.length > 0 && (
+        <ul className="divide-y divide-[var(--line)]">
+          {[...sleep.data.nights].reverse().map((night) => (
+            <li key={night.id} className="flex items-center gap-3 py-3">
+              <div className="min-w-0 flex-1">
+                <div className="font-medium">{nightLabel(night.date)}</div>
+                <p className="text-sm text-[var(--muted)]">
+                  {night.startTime}–{night.endTime}
+                  {night.score != null ? ` · score ${night.score}` : ''}
+                </p>
+              </div>
+              <TrashButton
+                label={`Delete sleep on ${night.date}`}
+                onClick={async () => {
+                  await api(`/api/mind/sleep/${night.id}`, { method: 'DELETE' })
+                  void queryClient.invalidateQueries({ queryKey: ['sleep'] })
+                }}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
 
       {open && (
         <Dialog title="Log sleep" onClose={() => setOpen(false)}>
@@ -210,6 +243,8 @@ function SleepPanel() {
               })
               setOpen(false)
               void queryClient.invalidateQueries({ queryKey: ['sleep'] })
+              void queryClient.invalidateQueries({ queryKey: ['today'] })
+              void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
             }}
           >
             <input className="field" type="date" value={date} onChange={(event) => setDate(event.target.value)} />

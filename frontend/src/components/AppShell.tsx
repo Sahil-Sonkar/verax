@@ -1,27 +1,21 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Brain, Clock3, Dumbbell, Flame, Home, Settings, Wallet } from 'lucide'
+import { Brain, Clock3, Dumbbell, HeartPulse, Home, Mic, Settings, Wallet } from 'lucide'
 import { clsx } from 'clsx'
 import { useAuth } from '../lib/auth'
 import { Glyph } from './Glyph'
 import { InstallHint } from './InstallHint'
 
-const desktop = [
-  { to: '/', label: 'Home', icon: Home },
+const rooms = [
   { to: '/routine', label: 'Routine', icon: Clock3 },
-  { to: '/fuel', label: 'Fuel', icon: Flame },
-  { to: '/train', label: 'Train', icon: Dumbbell },
-  { to: '/finance', label: 'Finance', icon: Wallet },
+  { to: '/body', label: 'Body', icon: HeartPulse },
+  { to: '/play', label: 'Play', icon: Dumbbell },
+  { to: '/money', label: 'Money', icon: Wallet },
   { to: '/mind', label: 'Mind', icon: Brain },
-  { to: '/settings', label: 'Profile', icon: Settings },
+  { to: '/voice', label: 'Voice', icon: Mic },
 ]
-
-const mobile = [
-  { to: '/routine', label: 'Routine', icon: Clock3 },
-  { to: '/fuel', label: 'Fuel', icon: Flame },
-  { to: '/train', label: 'Train', icon: Dumbbell },
-  { to: '/finance', label: 'Finance', icon: Wallet },
-  { to: '/mind', label: 'Mind', icon: Brain },
-]
+const home = { to: '/', label: 'Home', icon: Home }
+const desktop = [home, ...rooms, { to: '/settings', label: 'Profile', icon: Settings }]
+const mobile = [home, ...rooms]
 
 function initials(name?: string) {
   const parts = (name ?? 'V').trim().split(/\s+/)
@@ -32,7 +26,7 @@ export function AppShell() {
   const { user } = useAuth()
   const location = useLocation()
   const title = desktop.find((d) => d.to === location.pathname)?.label ?? 'Verax'
-  const fullBleed = location.pathname === '/fuel'
+  const fullBleed = location.pathname === '/body'
 
   return (
     <div className="min-h-dvh bg-[var(--bg)] text-[var(--fg)]">
@@ -74,9 +68,9 @@ export function AppShell() {
       <div className="lg:pl-[244px]">
         {!fullBleed && (
           <header className="nav-compact sticky top-0 z-[20] flex min-h-14 items-center justify-between px-4 lg:hidden">
-            <div className="wordmark text-[32px] leading-none" translate="no">
+            <NavLink to="/" className="wordmark text-[32px] leading-none" translate="no" aria-label="Home" end>
               Verax
-            </div>
+            </NavLink>
             <div className="text-sm font-semibold">{title === 'Home' ? '' : title}</div>
           </header>
         )}
@@ -94,7 +88,7 @@ export function AppShell() {
       </div>
 
       <nav className="tab-glass fixed z-[20] lg:hidden" aria-label="Primary">
-        <div className="grid grid-cols-6">
+        <div className="grid grid-cols-8">
           {mobile.map((item) => (
             <NavLink
               key={item.to}
