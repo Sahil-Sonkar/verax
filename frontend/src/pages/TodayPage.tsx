@@ -185,7 +185,7 @@ export function TodayPage() {
         })}
       </div>
 
-      <div className="sticky bottom-16 mt-8 border-t border-[var(--line)] bg-[var(--bg)] pt-4 lg:bottom-6" aria-live="polite">
+      <div className="sticky bottom-[calc(5.75rem+env(safe-area-inset-bottom))] mt-8 border-t border-[var(--line)] bg-[var(--bg)] pt-4 lg:bottom-6" aria-live="polite">
         <div className="flex items-end justify-between">
           <div>
             <div className="text-4xl tracking-tight tabular" style={{ color: tone }}>

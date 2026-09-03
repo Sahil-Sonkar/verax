@@ -8,8 +8,8 @@ import { RoutineCalendar } from '../components/RoutineCalendar'
 import { Sectograph } from '../components/Sectograph'
 import { TimeField } from '../components/TimeField'
 import { WeekdayChips } from '../components/WeekdayChips'
-import { api } from '../lib/api'
-import { formatClock, isoWeekday, parseClock, toTimeInput, WEEKDAY_LABELS } from '../lib/weekdays'
+import { ApiError, api } from '../lib/api'
+import { formatClock, isoWeekday, parseClock, timesOverlap, toTimeInput, WEEKDAY_LABELS } from '../lib/weekdays'
 import type { GoogleCalendarEvent, GoogleCalendarStatus, RoutineBlock, RoutineDay, RoutineTask, RoutineWeek } from '../types'
 
 export function RoutinePage() {
@@ -18,6 +18,8 @@ export function RoutinePage() {
   const week = useQuery({ queryKey: ['routine-week'], queryFn: () => api<RoutineWeek>('/api/routine/week') })
   const googleCal = useQuery({ queryKey: ['google-calendar'], queryFn: () => api<GoogleCalendarStatus>('/api/calendar/google') })
   const [open, setOpen] = useState<RoutineBlock | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [blockError, setBlockError] = useState('')
   const [create, setCreate] = useState(false)
   const [title, setTitle] = useState('')
   const [start, setStart] = useState('06:00')
@@ -106,7 +108,22 @@ export function RoutinePage() {
     await refresh()
   }
 
+  function overlapMessage(title: string) {
+    return `That time overlaps “${title}”. Pick a free slot.`
+  }
+
+  function rejectOverlap(candidate: { id?: string; startMin: number; endMin: number; weekdays: number[] }) {
+    const hit = overlappingTitle(week.data, candidate)
+    if (!hit) {
+      setBlockError('')
+      return false
+    }
+    setBlockError(overlapMessage(hit))
+    return true
+  }
+
   async function moveBlock(block: RoutineBlock, next: { startMin: number; endMin: number }) {
+    if (rejectOverlap({ id: block.id, ...next, weekdays: block.weekdays })) return
     queryClient.setQueryData<RoutineWeek>(['routine-week'], (prev) => {
       if (!prev) return prev
       return {
@@ -126,6 +143,8 @@ export function RoutinePage() {
         method: 'PATCH',
         body: JSON.stringify({ startMin: next.startMin, endMin: next.endMin }),
       })
+    } catch (err) {
+      setBlockError(err instanceof Error ? err.message : overlapMessage('another block'))
     } finally {
       await refresh()
     }
@@ -133,6 +152,8 @@ export function RoutinePage() {
 
   function openCreate(slot?: { weekday: number; startMin: number; endMin: number }) {
     setOpen(null)
+    setEditing(false)
+    setBlockError('')
     if (slot) {
       setStart(toTimeInput(slot.startMin))
       setEnd(toTimeInput(slot.endMin))
@@ -146,6 +167,8 @@ export function RoutinePage() {
 
   function selectBlock(block: RoutineBlock) {
     setCreate(false)
+    setEditing(false)
+    setBlockError('')
     setOpen(block)
     setEditTitle(block.title)
     setEditStart(toTimeInput(block.startMin))
@@ -154,7 +177,23 @@ export function RoutinePage() {
     setEditAllWeek(block.weekdays.length === 7)
     setEditColor(block.color || '#0095f6')
     setTaskName('')
-    setTaskDays([])
+    setTaskDays([weekday])
+  }
+
+  function startEdit() {
+    if (!open) return
+    setOpen({ ...open, tasks: collectBlockTasks(week.data, open.id) })
+    setTaskDays([weekday])
+    setBlockError('')
+    setEditing(true)
+  }
+
+  function backToView() {
+    if (!open) return
+    const latest = dayBlock(week.data, open.id, weekday)
+    setOpen(latest ?? { ...open, tasks: open.tasks.filter((task) => taskOnDay(task, weekday)) })
+    setEditing(false)
+    setBlockError('')
   }
 
   async function saveBlock() {
@@ -162,6 +201,8 @@ export function RoutinePage() {
     const startMin = parseClock(editStart)
     const endMin = parseClock(editEnd)
     if (startMin == null || endMin == null || !editTitle.trim()) return
+    const weekdays = editAllWeek ? [1, 2, 3, 4, 5, 6, 7] : editDays
+    if (rejectOverlap({ id: open.id, startMin, endMin, weekdays })) return
     setSaving(true)
     try {
       const updated = await api<RoutineBlock>(`/api/routine/blocks/${open.id}`, {
@@ -170,13 +211,15 @@ export function RoutinePage() {
           title: editTitle.trim(),
           startMin,
           endMin,
-          weekdays: editAllWeek ? [1, 2, 3, 4, 5, 6, 7] : editDays,
+          weekdays,
           allWeek: editAllWeek,
           color: editColor,
         }),
       })
       setOpen(updated)
       await refresh()
+    } catch (err) {
+      setBlockError(err instanceof ApiError ? err.message : overlapMessage('another block'))
     } finally {
       setSaving(false)
     }
@@ -193,12 +236,15 @@ export function RoutinePage() {
     })
     setOpen({
       ...open,
-      tasks: open.tasks
-        .map((row) => (row.id === task.id ? updated : row))
-        .filter((row) => row.weekdays.length === 0 || row.weekdays.includes(weekday)),
+      tasks: open.tasks.map((row) => (row.id === task.id ? updated : row)),
     })
     await refresh()
   }
+
+  const editScope = (editAllWeek ? [1, 2, 3, 4, 5, 6, 7] : editDays.length ? editDays : open?.weekdays ?? [])
+    .slice()
+    .sort((a, b) => a - b)
+  const viewTasks = open?.tasks.filter((task) => taskOnDay(task, weekday)) ?? []
 
   return (
     <div className="space-y-8">
@@ -210,6 +256,11 @@ export function RoutinePage() {
             One line per block. Day is the clock. Week and month are a calendar of the same repeating week
             {googleCal.data?.connected ? ` · two-way with ${googleCal.data.email ?? 'Google Calendar'}` : ''}.
           </p>
+          {blockError && !open && !create && (
+            <p className="mt-2 text-sm text-[var(--danger)]" role="alert">
+              {blockError}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-[var(--line)] p-0.5">
@@ -307,102 +358,160 @@ export function RoutinePage() {
       )}
 
       {open && (
-        <Dialog title="Edit block" onClose={() => setOpen(null)}>
-          <form
-            className="mt-4 space-y-3"
-            onSubmit={async (event) => {
-              event.preventDefault()
-              await saveBlock()
-            }}
-          >
-            <label className="block">
-              <span className="mb-1 block text-xs text-[var(--muted)]">Name</span>
-              <input className="field" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} required />
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="mb-1 block text-xs text-[var(--muted)]">Start</span>
-                <TimeField hour12={hour12} value={editStart} onChange={setEditStart} />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs text-[var(--muted)]">End</span>
-                <TimeField hour12={hour12} value={editEnd} onChange={setEditEnd} />
-              </label>
-            </div>
-            <ColorSwatches value={editColor} onChange={setEditColor} />
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={editAllWeek} onChange={(event) => setEditAllWeek(event.target.checked)} />
-              Whole week
-            </label>
-            {!editAllWeek && (
-              <div>
-                <div className="mb-1 text-xs text-[var(--muted)]">Days</div>
-                <WeekdayChips value={editDays} onChange={setEditDays} />
+        <Dialog
+          title={editing ? 'Edit block' : open.title}
+          onClose={() => {
+            setOpen(null)
+            setEditing(false)
+            setBlockError('')
+          }}
+          onBack={editing ? backToView : undefined}
+          action={
+            editing ? undefined : (
+              <button type="button" className="px-2 text-sm font-semibold" onClick={startEdit}>
+                Edit
+              </button>
+            )
+          }
+        >
+          {editing ? (
+            <>
+              <form
+                className="mt-4 space-y-3"
+                onSubmit={async (event) => {
+                  event.preventDefault()
+                  await saveBlock()
+                }}
+              >
+                <label className="block">
+                  <span className="mb-1 block text-xs text-[var(--muted)]">Name</span>
+                  <input className="field" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} required />
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className="mb-1 block text-xs text-[var(--muted)]">Start</span>
+                    <TimeField hour12={hour12} value={editStart} onChange={setEditStart} />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-xs text-[var(--muted)]">End</span>
+                    <TimeField hour12={hour12} value={editEnd} onChange={setEditEnd} />
+                  </label>
+                </div>
+                <ColorSwatches value={editColor} onChange={setEditColor} />
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={editAllWeek} onChange={(event) => setEditAllWeek(event.target.checked)} />
+                  Whole week
+                </label>
+                {!editAllWeek && (
+                  <div>
+                    <div className="mb-1 text-xs text-[var(--muted)]">Days</div>
+                    <WeekdayChips value={editDays} onChange={setEditDays} />
+                  </div>
+                )}
+                {blockError && (
+                  <p className="text-sm text-[var(--danger)]" role="alert">
+                    {blockError}
+                  </p>
+                )}
+                <div className="flex justify-end">
+                  <PrimaryButton type="submit" disabled={saving}>
+                    Save block
+                  </PrimaryButton>
+                </div>
+              </form>
+
+              <div className="mt-6 space-y-5">
+                {editScope.map((day) => {
+                  const items = open.tasks.filter((task) => taskOnDay(task, day))
+                  return (
+                    <div key={day} className="space-y-2">
+                      <div className="text-xs uppercase tracking-wide text-[var(--muted)]">{WEEKDAY_LABELS[day - 1]}</div>
+                      {items.length === 0 && <p className="text-sm text-[var(--muted)]">None</p>}
+                      {items.map((task) =>
+                        firstVisibleDay(task, editScope) === day ? (
+                          <TaskEditor
+                            key={task.id}
+                            task={task}
+                            onSave={(patch) => void saveTask(task, patch)}
+                            onRemove={async () => {
+                              await api(`/api/routine/tasks/${task.id}`, { method: 'DELETE' })
+                              setOpen({ ...open, tasks: open.tasks.filter((row) => row.id !== task.id) })
+                              await refresh()
+                            }}
+                          />
+                        ) : (
+                          <div key={task.id} className="rounded-md bg-[var(--surface-2)] px-3 py-3 text-sm">
+                            {task.name}
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )
+                })}
               </div>
-            )}
-            <div className="flex justify-end">
-              <PrimaryButton type="submit" disabled={saving}>
-                Save block
-              </PrimaryButton>
-            </div>
-          </form>
 
-          <div className="mt-6 space-y-2">
-            <div className="text-xs uppercase tracking-wide text-[var(--muted)]">Subtasks</div>
-            {open.tasks.length === 0 && <p className="text-sm text-[var(--muted)]">No subtasks on this day.</p>}
-            {open.tasks.map((task) => (
-              <TaskEditor
-                key={task.id}
-                task={task}
-                onSave={(patch) => void saveTask(task, patch)}
-                onRemove={async () => {
-                  await api(`/api/routine/tasks/${task.id}`, { method: 'DELETE' })
-                  setOpen({ ...open, tasks: open.tasks.filter((row) => row.id !== task.id) })
+              <form
+                className="mt-5 space-y-3"
+                onSubmit={async (event) => {
+                  event.preventDefault()
+                  const task = await api<RoutineTask>(`/api/routine/blocks/${open.id}/tasks`, {
+                    method: 'POST',
+                    body: JSON.stringify({ name: taskName, weekdays: taskDays }),
+                  })
+                  setTaskName('')
+                  setOpen({ ...open, tasks: [...open.tasks, task] })
                   await refresh()
                 }}
-              />
-            ))}
-          </div>
-
-          <form
-            className="mt-5 space-y-3"
-            onSubmit={async (event) => {
-              event.preventDefault()
-              const task = await api<RoutineTask>(`/api/routine/blocks/${open.id}/tasks`, {
-                method: 'POST',
-                body: JSON.stringify({ name: taskName, weekdays: taskDays }),
-              })
-              setTaskName('')
-              setOpen({ ...open, tasks: [...open.tasks, task] })
-              await refresh()
-            }}
-          >
-            <label className="block">
-              <span className="mb-1 block text-xs text-[var(--muted)]">New subtask</span>
-              <input className="field" value={taskName} onChange={(event) => setTaskName(event.target.value)} required placeholder="e.g. trim beard" />
-            </label>
-            <div>
-              <div className="mb-1 text-xs text-[var(--muted)]">Show only on</div>
-              <WeekdayChips value={taskDays} onChange={setTaskDays} emptyMeansAll />
-              <p className="mt-1 text-xs text-[var(--muted)]">Leave all on to show every day this block exists.</p>
-            </div>
-            <div className="flex justify-between gap-2 pt-1">
-              <TrashButton
-                label="Delete block"
-                onClick={async () => {
-                  await api(`/api/routine/blocks/${open.id}`, { method: 'DELETE' })
-                  setOpen(null)
-                  await refresh()
-                }}
-              />
-              <AddButton label="Add subtask" variant="primary" type="submit" />
-            </div>
-          </form>
+              >
+                <label className="block">
+                  <span className="mb-1 block text-xs text-[var(--muted)]">New subtask</span>
+                  <input className="field" value={taskName} onChange={(event) => setTaskName(event.target.value)} required placeholder="e.g. trim beard" />
+                </label>
+                <div>
+                  <div className="mb-1 text-xs text-[var(--muted)]">Show only on</div>
+                  <WeekdayChips value={taskDays} onChange={setTaskDays} emptyMeansAll />
+                  <p className="mt-1 text-xs text-[var(--muted)]">Leave all on to show every day this block exists.</p>
+                </div>
+                <div className="flex justify-between gap-2 pt-1">
+                  <TrashButton
+                    label="Delete block"
+                    onClick={async () => {
+                      await api(`/api/routine/blocks/${open.id}`, { method: 'DELETE' })
+                      setOpen(null)
+                      setEditing(false)
+                      await refresh()
+                    }}
+                  />
+                  <AddButton label="Add subtask" variant="primary" type="submit" />
+                </div>
+              </form>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 tabular text-sm text-[var(--muted)]">
+                {formatClock(open.startMin, hour12)} – {formatClock(open.endMin, hour12)} · {WEEKDAY_LABELS[weekday - 1]}
+              </p>
+              {viewTasks.length > 0 ? (
+                <ul className="mt-4 divide-y divide-[var(--line)]">
+                  {viewTasks.map((task) => (
+                    <li key={task.id} className="py-3 text-base">
+                      {task.name}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-4 text-sm text-[var(--muted)]">No subtasks this {WEEKDAY_LABELS[weekday - 1]}.</p>
+              )}
+            </>
+          )}
         </Dialog>
       )}
 
       {create && (
-        <Dialog title="Add block" onClose={() => setCreate(false)}>
+        <Dialog title="Add block" onClose={() => {
+          setCreate(false)
+          setBlockError('')
+        }}>
           <form
             className="mt-4 space-y-3"
             onSubmit={async (event) => {
@@ -410,21 +519,27 @@ export function RoutinePage() {
               const startMin = parseClock(start)
               const endMin = parseClock(end)
               if (startMin == null || endMin == null) return
-              await api('/api/routine/blocks', {
-                method: 'POST',
-                body: JSON.stringify({
-                  title,
-                  startMin,
-                  endMin,
-                  weekdays: allWeek ? [1, 2, 3, 4, 5, 6, 7] : days,
-                  allWeek,
-                  color,
-                }),
-              })
-              setCreate(false)
-              setTitle('')
-              setColor('#0095f6')
-              await refresh()
+              const weekdays = allWeek ? [1, 2, 3, 4, 5, 6, 7] : days
+              if (rejectOverlap({ startMin, endMin, weekdays })) return
+              try {
+                await api('/api/routine/blocks', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    title,
+                    startMin,
+                    endMin,
+                    weekdays,
+                    allWeek,
+                    color,
+                  }),
+                })
+                setCreate(false)
+                setTitle('')
+                setColor('#0095f6')
+                await refresh()
+              } catch (err) {
+                setBlockError(err instanceof ApiError ? err.message : overlapMessage('another block'))
+              }
             }}
           >
             <label className="block">
@@ -451,6 +566,11 @@ export function RoutinePage() {
                 <div className="mb-1 text-xs text-[var(--muted)]">Days</div>
                 <WeekdayChips value={days} onChange={setDays} />
               </div>
+            )}
+            {blockError && (
+              <p className="text-sm text-[var(--danger)]" role="alert">
+                {blockError}
+              </p>
             )}
             <div className="flex justify-end pt-2">
               <PrimaryButton type="submit">Save block</PrimaryButton>
@@ -495,4 +615,43 @@ function TaskEditor({
       />
     </div>
   )
+}
+
+function taskOnDay(task: RoutineTask, day: number) {
+  return task.weekdays.length === 0 || task.weekdays.includes(day)
+}
+
+function collectBlockTasks(week: RoutineWeek | undefined, blockId: string) {
+  const byId = new Map<string, RoutineTask>()
+  for (const day of week?.days ?? []) {
+    const block = day.blocks.find((row) => row.id === blockId)
+    for (const task of block?.tasks ?? []) byId.set(task.id, task)
+  }
+  return [...byId.values()]
+}
+
+function dayBlock(week: RoutineWeek | undefined, blockId: string, weekday: number) {
+  return week?.days.find((row) => row.weekday === weekday)?.blocks.find((row) => row.id === blockId)
+}
+
+function firstVisibleDay(task: RoutineTask, scope: number[]) {
+  const days = (task.weekdays.length ? task.weekdays : scope).filter((day) => scope.includes(day))
+  return days.length ? Math.min(...days) : 0
+}
+
+function overlappingTitle(
+  week: RoutineWeek | undefined,
+  candidate: { id?: string; startMin: number; endMin: number; weekdays: number[] },
+) {
+  const days = candidate.weekdays.length ? candidate.weekdays : [1, 2, 3, 4, 5, 6, 7]
+  for (const day of week?.days ?? []) {
+    if (!days.includes(day.weekday)) continue
+    for (const block of day.blocks) {
+      if (block.id === candidate.id) continue
+      if (timesOverlap(candidate.startMin, candidate.endMin, block.startMin, block.endMin)) {
+        return block.title
+      }
+    }
+  }
+  return null
 }

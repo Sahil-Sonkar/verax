@@ -64,4 +64,13 @@ public final class Weekdays {
         List<Integer> scoped = parse(taskDays);
         return scoped.isEmpty() || scoped.contains(weekday);
     }
+
+    public static boolean shareAny(String left, String right) {
+        List<Integer> a = parse(left);
+        List<Integer> b = parse(right);
+        if (a.isEmpty() || b.isEmpty()) {
+            return true;
+        }
+        return a.stream().anyMatch(b::contains);
+    }
 }

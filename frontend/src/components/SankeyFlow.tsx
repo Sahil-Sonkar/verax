@@ -76,9 +76,11 @@ export function SankeyFlow({ data }: { data: FlowChart | Portfolio }) {
   }, [empty])
 
   const nodeCount = Math.max(data.nodes.length, 3)
-  const height = Math.max(360, Math.min(720, 72 + nodeCount * 38))
-  const padL = 156
-  const padR = 156
+  const compact = width > 0 && width < 640
+  const height = Math.max(compact ? 280 : 360, Math.min(720, 72 + nodeCount * (compact ? 28 : 38)))
+  const pad = compact ? Math.round(Math.min(88, Math.max(48, width * 0.2))) : 156
+  const padL = pad
+  const padR = pad
 
   const graph = useMemo(() => {
     if (!width || empty) return null
@@ -101,7 +103,7 @@ export function SankeyFlow({ data }: { data: FlowChart | Portfolio }) {
       try {
         const layout = sankey<ExtraNode, ExtraLink>()
           .nodeId((node) => node.id)
-          .nodeWidth(16)
+          .nodeWidth(compact ? 12 : 16)
           .nodePadding(padding)
           .nodeAlign(sankeyJustify)
           .nodeSort((a, b) => (b.value ?? 0) - (a.value ?? 0))
@@ -117,7 +119,7 @@ export function SankeyFlow({ data }: { data: FlowChart | Portfolio }) {
       }
     }
     return null
-  }, [data, width, height, empty])
+  }, [data, width, height, empty, compact, padL, padR])
 
   const path = useMemo(() => sankeyLinkHorizontal<ExtraNode, ExtraLink>(), [])
   const host = wrap.current
@@ -255,11 +257,11 @@ export function SankeyFlow({ data }: { data: FlowChart | Portfolio }) {
                   stroke="var(--bg)"
                   strokeWidth={mid ? 5 : 3}
                   paintOrder="stroke"
-                  fontSize={12}
+                  fontSize={compact ? 10 : 12}
                   fontWeight={500}
                   style={{ fontFamily: 'var(--font-sans)' }}
                 >
-                  {shortName(node.name)}
+                  {shortName(node.name, compact ? 10 : 22)}
                 </text>
                 {tall && (
                   <text
@@ -270,7 +272,7 @@ export function SankeyFlow({ data }: { data: FlowChart | Portfolio }) {
                     stroke="var(--bg)"
                     strokeWidth={mid ? 5 : 3}
                     paintOrder="stroke"
-                    fontSize={10}
+                    fontSize={compact ? 9 : 10}
                     className="tabular"
                     style={{ fontFamily: 'var(--font-mono)' }}
                   >

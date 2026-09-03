@@ -74,6 +74,7 @@ public class RoutineService {
         block.setUser(user);
         apply(block, request);
         block.setSortOrder(request.startMin());
+        assertNoOverlap(userId, block);
         blocks.save(block);
         schedulePush(userId, block.getId());
         return RoutineDtos.BlockView.from(block, null);
@@ -83,6 +84,7 @@ public class RoutineService {
     public RoutineDtos.BlockView updateBlock(UUID userId, UUID id, RoutineDtos.BlockUpsert request) {
         RoutineBlock block = blocks.findWithTasks(id, userId).orElseThrow(() -> ApiException.notFound("Block not found"));
         apply(block, request);
+        assertNoOverlap(userId, block);
         schedulePush(userId, block.getId());
         return RoutineDtos.BlockView.from(block, null);
     }
@@ -126,6 +128,21 @@ public class RoutineService {
     public void deleteTask(UUID userId, UUID id) {
         RoutineTask task = tasks.findByIdAndBlockUserId(id, userId).orElseThrow(() -> ApiException.notFound("Subtask not found"));
         tasks.delete(task);
+    }
+
+    private void assertNoOverlap(UUID userId, RoutineBlock candidate) {
+        UUID ignore = candidate.getId();
+        for (RoutineBlock other : blocks.findWithTasks(userId)) {
+            if (ignore != null && ignore.equals(other.getId())) {
+                continue;
+            }
+            if (!Weekdays.shareAny(candidate.getWeekdays(), other.getWeekdays())) {
+                continue;
+            }
+            if (BlockSpan.overlaps(candidate.getStartMin(), candidate.getEndMin(), other.getStartMin(), other.getEndMin())) {
+                throw ApiException.conflict("That time overlaps \"" + other.getTitle() + "\"");
+            }
+        }
     }
 
     private void apply(RoutineBlock block, RoutineDtos.BlockUpsert request) {

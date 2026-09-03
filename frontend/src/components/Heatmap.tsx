@@ -51,68 +51,66 @@ export function ConsistencyHeatmap({
   })
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[640px]">
-        <div className="relative mb-2 h-4 text-[10px] tracking-wide text-[var(--muted)]">
-          {monthMarks.map((mark) => (
-            <span
-              key={mark.week}
-              className="absolute"
-              style={{ left: `${(mark.week / weeks.length) * 100}%` }}
-            >
-              {mark.label}
-            </span>
-          ))}
-        </div>
-        <div className="flex gap-1" role="grid" aria-label="Daily consistency">
-          {weeks.map((week) => (
-            <div key={week.toISOString()} className="flex flex-col gap-1" role="row">
-              {Array.from({ length: 7 }, (_, day) => {
-                const date = new Date(week)
-                date.setDate(week.getDate() + day)
-                const key = iso(date)
-                const cell = byDate.get(key)
-                if (!cell) {
-                  return <div key={key} className="size-4 rounded-[4px] bg-transparent" role="gridcell" />
-                }
-                const label = new Intl.DateTimeFormat(undefined, {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                }).format(date)
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    role="gridcell"
-                    aria-label={`${label}: ${cell.percent}%`}
-                    aria-pressed={selected === key}
-                    title={`${label}: ${cell.percent}%`}
-                    onClick={() => onSelect?.(key)}
-                    className={clsx(
-                      'size-4 rounded-[4px] transition-transform duration-150 hover:scale-110',
-                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
-                      selected === key && 'ring-1 ring-[var(--fg)]',
-                    )}
-                    style={{ background: HEAT[cell.level] ?? HEAT[0] }}
-                  />
-                )
-              })}
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 flex items-center gap-2 text-[10px] tracking-wide text-[var(--muted)]">
-          Less
-          {HEAT.map((color, i) => (
-            <span
-              key={color}
-              className="size-3.5 rounded-[4px]"
-              style={{ background: color, opacity: i === 0 ? 0.7 : 1 }}
-              aria-hidden="true"
-            />
-          ))}
-          More
-        </div>
+    <div className="w-full">
+      <div className="relative mb-2 h-4 text-[10px] tracking-wide text-[var(--muted)]">
+        {monthMarks.map((mark) => (
+          <span
+            key={mark.week}
+            className="absolute"
+            style={{ left: `${(mark.week / weeks.length) * 100}%` }}
+          >
+            {mark.label}
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-px sm:gap-1" role="grid" aria-label="Daily consistency">
+        {weeks.map((week) => (
+          <div key={week.toISOString()} className="flex min-w-0 flex-1 flex-col gap-px sm:gap-1" role="row">
+            {Array.from({ length: 7 }, (_, day) => {
+              const date = new Date(week)
+              date.setDate(week.getDate() + day)
+              const key = iso(date)
+              const cell = byDate.get(key)
+              if (!cell) {
+                return <div key={key} className="aspect-square w-full rounded-[2px] bg-transparent" role="gridcell" />
+              }
+              const label = new Intl.DateTimeFormat(undefined, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              }).format(date)
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="gridcell"
+                  aria-label={`${label}: ${cell.percent}%`}
+                  aria-pressed={selected === key}
+                  title={`${label}: ${cell.percent}%`}
+                  onClick={() => onSelect?.(key)}
+                  className={clsx(
+                    'aspect-square w-full min-h-0 rounded-[2px] transition-transform duration-150 hover:scale-110',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
+                    selected === key && 'ring-1 ring-[var(--fg)]',
+                  )}
+                  style={{ background: HEAT[cell.level] ?? HEAT[0] }}
+                />
+              )
+            })}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center gap-2 text-[10px] tracking-wide text-[var(--muted)]">
+        Less
+        {HEAT.map((color, i) => (
+          <span
+            key={color}
+            className="size-3.5 rounded-[4px]"
+            style={{ background: color, opacity: i === 0 ? 0.7 : 1 }}
+            aria-hidden="true"
+          />
+        ))}
+        More
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 import { Fragment, useId, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   Area,
   AreaChart,
@@ -49,6 +49,7 @@ const INVEST_COLS = [
   'P/E Ratio',
   'Volume',
 ] as const
+const INVEST_CORE = new Set(['Ticker', 'Avg. Buy', 'Qty.', 'Current Value', 'P&L'])
 const KIND_CATEGORY: Record<string, string> = {
   IN_STOCK: 'Stocks',
   US_STOCK: 'Stocks',
@@ -135,6 +136,12 @@ function groupMonthSum(items: WorkbookItem[], month: string) {
 function nextMonth(yearMonth: string) {
   const [year, month] = yearMonth.split('-').map(Number)
   const date = new Date(year, month, 1)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function prevMonth(yearMonth: string) {
+  const [year, month] = yearMonth.split('-').map(Number)
+  const date = new Date(year, (month ?? 1) - 2, 1)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
@@ -235,16 +242,8 @@ function workbookFlow(items: WorkbookItem[], months: string[], label?: string): 
   return { month: range, monthIncome: income, nodes, links }
 }
 
-function cellClass(extra = '') {
-  return `h-9 w-full min-w-[8.5rem] border-0 bg-transparent px-2 text-right tabular text-sm outline-none focus:bg-[var(--surface-2)] ${extra}`
-}
-
-function labelCell(extra = '') {
-  return `h-8 w-full min-w-0 border-0 bg-transparent px-1 text-left text-sm outline-none focus:bg-[var(--surface-2)] ${extra}`
-}
-
-function investCell(extra = '') {
-  return `h-8 w-full min-w-[5.75rem] border-0 bg-transparent px-2 text-right tabular text-xs outline-none focus:bg-[var(--surface-2)] ${extra}`
+function kindLabel(kind: string) {
+  return kind === 'COMMODITY' ? 'commodity' : kind.toLowerCase().replaceAll('_', ' ')
 }
 
 export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest' | 'budget' }) {
@@ -271,11 +270,19 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
   const [lineCategory, setLineCategory] = useState('')
   const [lineName, setLineName] = useState('')
   const [lineKind, setLineKind] = useState('EXPENSE')
-  const [drafts, setDrafts] = useState<Record<string, string>>({})
-  const [holdingDrafts, setHoldingDrafts] = useState<Record<string, string>>({})
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({})
+  const [budgetEdit, setBudgetEdit] = useState(false)
+  const [investEdit, setInvestEdit] = useState(false)
+  const [editLine, setEditLine] = useState<{ item: WorkbookItem; month: string } | null>(null)
+  const [editCat, setEditCat] = useState<string | null>(null)
+  const [editCatName, setEditCatName] = useState('')
+  const [editHolding, setEditHolding] = useState<Holding | null>(null)
   const [flowGrain, setFlowGrain] = useState<FlowGrain>('month')
   const [flowAnchor, setFlowAnchor] = useState<string | null>(null)
+  const [focusMonth, setFocusMonth] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
 
   const total = holdings.data?.reduce((sum, row) => sum + Number(row.currentValueInr ?? row.currentValue ?? row.amount), 0) ?? 0
   const holdingSlices = useMemo(() => {
@@ -308,6 +315,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
   const months = workbook.data?.months ?? []
   const items = workbook.data?.items ?? []
   const totals = workbook.data?.totals ?? {}
+  const activeMonth = months.includes(focusMonth) ? focusMonth : (months.at(-1) ?? focusMonth)
   const categories = useMemo(() => [...new Set(items.map((item) => item.category).filter(Boolean))], [items])
   const ledger = items.filter((item) => item.kind !== 'INCOME')
   const income = items.filter((item) => item.kind === 'INCOME')
@@ -321,86 +329,14 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
     [items, activeFlow],
   )
 
-  async function saveCell(item: WorkbookItem, month: string, raw: string) {
-    const next = parseAmount(raw)
-    if (next == null && raw.trim() !== '') return
-    if (sameAmount(item.amounts[month], next)) {
-      setDrafts((current) => {
-        const copy = { ...current }
-        delete copy[`${item.id}:${month}`]
-        return copy
-      })
-      return
-    }
-    await api('/api/finance/workbook/cell', {
-      method: 'PATCH',
-      body: JSON.stringify({ itemId: item.id, month, amount: next }),
-    })
-    setDrafts((current) => {
-      const copy = { ...current }
-      delete copy[`${item.id}:${month}`]
-      return copy
-    })
-    await queryClient.invalidateQueries({ queryKey: ['workbook'] })
-  }
-
-  function cellValue(item: WorkbookItem, month: string) {
-    const key = `${item.id}:${month}`
-    if (key in drafts) return drafts[key]
-    const value = item.amounts[month]
-    return value == null ? '' : String(value)
-  }
-
-  function draftOr(key: string, fallback: string) {
-    return key in drafts ? drafts[key] : fallback
-  }
-
   async function refreshWorkbook() {
     await queryClient.invalidateQueries({ queryKey: ['workbook'] })
     void queryClient.invalidateQueries({ queryKey: ['fin-portfolio'] })
   }
 
-  async function saveItem(item: WorkbookItem, body: { name?: string; category?: string; kind?: string }) {
-    await api(`/api/finance/workbook/items/${item.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(body),
-    })
-    await refreshWorkbook()
-  }
-
-  async function saveName(item: WorkbookItem, raw: string) {
-    const name = raw.trim()
-    if (!name || name === item.name) {
-      setDrafts((current) => {
-        const copy = { ...current }
-        delete copy[`name:${item.id}`]
-        return copy
-      })
-      return
-    }
-    await saveItem(item, { name })
-    setDrafts((current) => {
-      const copy = { ...current }
-      delete copy[`name:${item.id}`]
-      return copy
-    })
-  }
-
-  async function saveKind(item: WorkbookItem, kind: string) {
-    if (kind === item.kind) return
-    await saveItem(item, { kind })
-  }
-
   async function saveCategory(from: string, raw: string) {
     const to = raw.trim()
-    if (!to || to === from) {
-      setDrafts((current) => {
-        const copy = { ...current }
-        delete copy[`cat:${from}`]
-        return copy
-      })
-      return
-    }
+    if (!to || to === from) return
     await api('/api/finance/workbook/category', {
       method: 'PATCH',
       body: JSON.stringify({ from, to }),
@@ -413,172 +349,120 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
       }
       return next
     })
-    setDrafts((current) => {
-      const copy = { ...current }
-      delete copy[`cat:${from}`]
-      return copy
-    })
     await refreshWorkbook()
   }
 
-  function holdingValue(row: Holding, field: 'ticker' | 'qty' | 'avgBuy') {
-    const key = `${row.id}:${field}`
-    if (key in holdingDrafts) return holdingDrafts[key]
-    if (field === 'ticker') return row.ticker || row.name || ''
-    if (field === 'qty') return Number(row.quantity) ? String(row.quantity) : ''
-    return Number(row.avgBuy) ? String(row.avgBuy) : ''
-  }
-
-  function setHoldingDraft(id: string, field: string, value: string) {
-    setHoldingDrafts((current) => ({ ...current, [`${id}:${field}`]: value }))
-  }
-
-  function clearHoldingDraft(id: string, field: string) {
-    setHoldingDrafts((current) => {
-      const copy = { ...current }
-      delete copy[`${id}:${field}`]
-      return copy
-    })
-  }
-
-  async function patchHolding(row: Holding, body: Record<string, unknown>) {
-    await api(`/api/finance/holdings/${row.id}`, { method: 'PATCH', body: JSON.stringify(body) })
-    void queryClient.invalidateQueries({ queryKey: ['holdings'] })
-    void queryClient.invalidateQueries({ queryKey: ['fin-portfolio'] })
-  }
-
-  async function saveHoldingTicker(row: Holding, raw: string) {
-    const symbol = raw.trim().toUpperCase()
-    if (!symbol || symbol === (row.ticker || row.name)) {
-      clearHoldingDraft(row.id, 'ticker')
-      return
-    }
-    await patchHolding(row, {
-      ticker: symbol,
-      name: !row.name || row.name === row.ticker ? symbol : row.name,
-    })
-    clearHoldingDraft(row.id, 'ticker')
-  }
-
-  async function saveHoldingNumber(row: Holding, field: 'quantity' | 'avgBuy', raw: string) {
-    const draftKey = field === 'quantity' ? 'qty' : 'avgBuy'
-    const next = parseAmount(raw)
-    if (next == null && raw.trim() !== '') return
-    const current = field === 'quantity' ? Number(row.quantity ?? 0) : Number(row.avgBuy ?? 0)
-    if ((next ?? 0) === current) {
-      clearHoldingDraft(row.id, draftKey)
-      return
-    }
-    await patchHolding(row, { [field]: next ?? 0 })
-    clearHoldingDraft(row.id, draftKey)
-  }
-
   function toggleCat(key: string) {
-    setOpenCats((current) => ({ ...current, [key]: !current[key] }))
+    setOpenCats((current) => ({ ...current, [key]: current[key] === false }))
   }
 
-  function renderRow(item: WorkbookItem, indent = false) {
+  function openAddLine(category = '', kind = 'EXPENSE') {
+    setLineCategory(category)
+    setLineKind(kind)
+    setLineName('')
+    if (category) setOpenCats((current) => ({ ...current, [category]: true }))
+    setAddLine(true)
+  }
+
+  function openEditLine(item: WorkbookItem, month: string) {
+    setFocusMonth(month)
+    setEditLine({ item, month })
+  }
+
+  function monthMark(month: string) {
+    return month === activeMonth ? ' bg-[var(--surface-2)]' : ''
+  }
+
+  function renderRow(item: WorkbookItem) {
     const tone = rowTone(item.kind, item.category)
     return (
-      <tr key={item.id} className={`group border-b border-[var(--line)] ${tone}`}>
-        <td className="sticky left-0 z-10 w-40 min-w-40 px-2 py-1 text-[var(--muted)]">
-          {indent ? (
-            ''
-          ) : (
-            <input
-              className={labelCell('text-[var(--muted)]')}
-              value={draftOr(`cat:${item.category}`, item.category)}
-              aria-label="Category"
-              onChange={(event) => setDrafts((current) => ({ ...current, [`cat:${item.category}`]: event.target.value }))}
-              onBlur={(event) => void saveCategory(item.category, event.target.value)}
-            />
-          )}
-        </td>
-        <td className="sticky left-40 z-10 w-52 min-w-52 px-1 py-0.5">
-          <input
-            className={labelCell('font-medium')}
-            value={draftOr(`name:${item.id}`, item.name)}
-            aria-label="Name"
-            onChange={(event) => setDrafts((current) => ({ ...current, [`name:${item.id}`]: event.target.value }))}
-            onBlur={(event) => void saveName(item, event.target.value)}
-          />
-          <select
-            className={labelCell('h-6 text-[10px] text-[var(--muted)]')}
-            value={item.kind}
-            aria-label={`Kind for ${item.name}`}
-            onChange={(event) => void saveKind(item, event.target.value)}
-          >
-            {LINE_KINDS.map((option) => (
-              <option key={option} value={option}>
-                {option.toLowerCase()}
-              </option>
-            ))}
-          </select>
+      <tr key={item.id} className={`border-b border-[var(--line)] ${tone}`}>
+        <td
+          className={`sticky left-0 z-10 min-w-[13rem] px-3 py-2 pl-9${budgetEdit ? ' cursor-pointer' : ''}`}
+          onClick={budgetEdit ? () => openEditLine(item, activeMonth) : undefined}
+        >
+          <div className="font-medium">{item.name}</div>
+          <div className="text-[10px] text-[var(--muted)]">{kindLabel(item.kind)}</div>
         </td>
         {months.map((month) => (
-          <td key={month} className="px-1 py-0.5">
-            <input
-              className={cellClass()}
-              inputMode="decimal"
-              value={cellValue(item, month)}
-              onChange={(event) => setDrafts((current) => ({ ...current, [`${item.id}:${month}`]: event.target.value }))}
-              onBlur={(event) => void saveCell(item, month, event.target.value)}
-            />
+          <td
+            key={month}
+            className={`cursor-pointer px-3 py-2 text-right tabular${monthMark(month)}`}
+            onClick={() => (budgetEdit ? openEditLine(item, month) : setFocusMonth(month))}
+          >
+            {formatInr(item.amounts[month], '')}
           </td>
         ))}
-        <td className="px-1 py-1 text-right">
-          <TrashButton
-            label={`Delete ${item.name}`}
-            onClick={async () => {
-              await api(`/api/finance/workbook/items/${item.id}`, { method: 'DELETE' })
-              void queryClient.invalidateQueries({ queryKey: ['workbook'] })
-            }}
-          />
-        </td>
+        {budgetEdit && (
+          <td className="px-2 py-1 text-right">
+            <button type="button" className="px-2 text-sm font-semibold" onClick={() => openEditLine(item, activeMonth)}>
+              Edit
+            </button>
+          </td>
+        )}
       </tr>
     )
   }
 
   function renderGroups(groups: { key: string; category: string; items: WorkbookItem[] }[]) {
     return groups.map((group) => {
-      const open = openCats[group.key] === true
+      const open = openCats[group.key] !== false
       const kind = group.items[0]?.kind ?? 'EXPENSE'
       const tone = rowTone(kind, group.category)
       const Chevron = open ? ChevronDown : ChevronRight
       return (
         <Fragment key={group.key}>
           <tr className={`border-b border-[var(--line)] ${tone}`}>
-            <td className="sticky left-0 z-10 w-40 min-w-40 px-1 py-1">
+            <td className="sticky left-0 z-10 min-w-[13rem] px-1 py-1">
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  className="grid size-6 shrink-0 place-items-center"
+                  className="grid size-10 shrink-0 place-items-center"
                   aria-expanded={open}
                   aria-label={open ? `Collapse ${group.category}` : `Expand ${group.category}`}
                   onClick={() => toggleCat(group.key)}
                 >
-                  <Chevron size={14} strokeWidth={2} aria-hidden="true" />
+                  <Chevron size={16} strokeWidth={2} aria-hidden="true" />
                 </button>
-                <input
-                  className={labelCell('font-medium')}
-                  value={draftOr(`cat:${group.key}`, group.category)}
-                  aria-label="Category"
-                  onChange={(event) => setDrafts((current) => ({ ...current, [`cat:${group.key}`]: event.target.value }))}
-                  onBlur={(event) => void saveCategory(group.category, event.target.value)}
-                />
+                <span className="min-w-0 flex-1 truncate px-1 font-medium">{group.category}</span>
+                {budgetEdit && (
+                  <AddButton
+                    label={`Add subcategory to ${group.category}`}
+                    onClick={() => openAddLine(group.category, group.items[0]?.kind ?? 'EXPENSE')}
+                  />
+                )}
               </div>
-            </td>
-            <td className="sticky left-40 z-10 w-52 min-w-52 px-3 py-1 text-[11px] text-[var(--muted)]">
-              {group.items.length} {group.items.length === 1 ? 'line' : 'lines'}
+              {!open && group.items.length > 0 && (
+                <p className="truncate pl-10 text-xs text-[var(--muted)]">
+                  {group.items.map((item) => item.name).join(' · ')}
+                </p>
+              )}
             </td>
             {months.map((month) => (
-              <td key={month} className="px-3 py-2 text-right tabular font-medium">
+              <td
+                key={month}
+                className={`px-3 py-2 text-right tabular font-medium cursor-pointer${monthMark(month)}`}
+                onClick={() => setFocusMonth(month)}
+              >
                 {formatInr(groupMonthSum(group.items, month), '')}
               </td>
             ))}
-            <td />
+            {budgetEdit && (
+              <td className="px-2 py-1 text-right">
+                <button
+                  type="button"
+                  className="px-2 text-sm font-semibold"
+                  onClick={() => {
+                    setEditCat(group.category)
+                    setEditCatName(group.category)
+                  }}
+                >
+                  Edit
+                </button>
+              </td>
+            )}
           </tr>
-          {open && group.items.map((item) => renderRow(item, true))}
+          {open && group.items.map((item) => renderRow(item))}
         </Fragment>
       )
     })
@@ -587,9 +471,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
   function summaryRow(label: string, values: Array<number | null | undefined>, colorizeBalance = false) {
     return (
       <tr className="border-b border-[var(--line)] bg-[var(--surface-2)] font-medium">
-        <td className="sticky left-0 z-10 bg-[var(--surface-2)] px-3 py-2" colSpan={2}>
-          {label}
-        </td>
+        <td className="sticky left-0 z-10 bg-[var(--surface-2)] px-3 py-2">{label}</td>
         {values.map((value, index) => {
           const tone = colorizeBalance
             ? (value ?? 0) >= 0
@@ -597,13 +479,108 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
               : 'text-[var(--danger)]'
             : ''
           return (
-            <td key={months[index] ?? index} className={`px-3 py-2 text-right tabular ${tone}`}>
+            <td
+              key={months[index] ?? index}
+              className={`cursor-pointer px-3 py-2 text-right tabular ${tone}${monthMark(months[index] ?? '')}`}
+              onClick={() => months[index] && setFocusMonth(months[index])}
+            >
               {formatInr(value ?? null, '')}
             </td>
           )
         })}
-        <td />
+        {budgetEdit && <td />}
       </tr>
+    )
+  }
+
+  function monthListGroups(groups: { key: string; category: string; items: WorkbookItem[] }[]) {
+    return groups.map((group) => {
+      const open = openCats[group.key] !== false
+      const kind = group.items[0]?.kind ?? 'EXPENSE'
+      const tone = rowTone(kind, group.category)
+      const Chevron = open ? ChevronDown : ChevronRight
+      return (
+        <div key={group.key} className={`border-b border-[var(--line)] ${tone}`}>
+          <div className="flex items-center gap-1 px-2 py-1">
+            <button
+              type="button"
+              className="grid size-10 shrink-0 place-items-center"
+              aria-expanded={open}
+              aria-label={open ? `Collapse ${group.category}` : `Expand ${group.category}`}
+              onClick={() => toggleCat(group.key)}
+            >
+              <Chevron size={16} strokeWidth={2} aria-hidden="true" />
+            </button>
+            <span className="min-w-0 flex-1 truncate px-1 font-medium">{group.category}</span>
+            <span className="shrink-0 px-2 tabular text-sm font-medium">
+              {formatInr(groupMonthSum(group.items, activeMonth), '')}
+            </span>
+            {budgetEdit && (
+              <AddButton
+                label={`Add subcategory to ${group.category}`}
+                onClick={() => openAddLine(group.category, group.items[0]?.kind ?? 'EXPENSE')}
+              />
+            )}
+            {budgetEdit && (
+              <button
+                type="button"
+                className="shrink-0 px-2 text-sm font-semibold"
+                onClick={() => {
+                  setEditCat(group.category)
+                  setEditCatName(group.category)
+                }}
+              >
+                Edit
+              </button>
+            )}
+          </div>
+          {!open && group.items.length > 0 && (
+            <p className="truncate px-12 pb-2 text-xs text-[var(--muted)]">
+              {group.items.map((item) => item.name).join(' · ')}
+            </p>
+          )}
+          {open &&
+            group.items.map((item) =>
+              budgetEdit ? (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="flex w-full items-center gap-2 py-2 pr-3 pl-4 text-left"
+                  onClick={() => openEditLine(item, activeMonth)}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium">{item.name}</div>
+                    <div className="text-[10px] text-[var(--muted)]">{kindLabel(item.kind)}</div>
+                  </div>
+                  <span className="shrink-0 tabular text-sm">
+                    {formatInr(item.amounts[activeMonth], '')}
+                  </span>
+                  <span className="shrink-0 text-sm font-semibold">Edit</span>
+                </button>
+              ) : (
+                <div key={item.id} className="flex items-center gap-2 py-2 pr-3 pl-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium">{item.name}</div>
+                    <div className="text-[10px] text-[var(--muted)]">{kindLabel(item.kind)}</div>
+                  </div>
+                  <span className="shrink-0 tabular text-sm">
+                    {formatInr(item.amounts[activeMonth], '')}
+                  </span>
+                </div>
+              ),
+            )}
+        </div>
+      )
+    })
+  }
+
+  function monthSummary(label: string, value: number | null | undefined, colorize = false) {
+    const tone = colorize ? ((value ?? 0) >= 0 ? 'text-[var(--mint)]' : 'text-[var(--danger)]') : ''
+    return (
+      <div className="flex items-center justify-between bg-[var(--surface-2)] px-4 py-3 text-sm font-medium">
+        <span>{label}</span>
+        <span className={`tabular ${tone}`}>{formatInr(value ?? null, '')}</span>
+      </div>
     )
   }
 
@@ -621,7 +598,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <AddButton label="Add line" onClick={() => setAddLine(true)} />
+            <AddButton label="Add line" onClick={() => openAddLine()} />
             <AddButton label="Add holding" variant="primary" onClick={() => setOpen(true)} />
           </div>
         </div>
@@ -629,7 +606,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
       {section !== 'all' && (
         <div className="flex flex-wrap justify-end gap-2">
           {showBudget && (
-            <AddButton label="Add line" onClick={() => setAddLine(true)} />
+            <AddButton label="Add line" onClick={() => openAddLine()} />
           )}
           {showInvest && <AddButton label="Add holding" variant="primary" onClick={() => setOpen(true)} />}
         </div>
@@ -638,35 +615,84 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
       {showInvest && (
         <div className="panel">
           <section className="card overflow-hidden p-0">
-            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--line)] px-6 py-4">
+            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--line)] px-4 py-4 sm:px-6">
               <div>
                 <div className="kicker">Portfolio</div>
                 <div className="mt-2 text-4xl tracking-tight tabular">{formatInr(total)}</div>
                 <p className="mt-1 max-w-[58ch] text-xs leading-relaxed text-[var(--muted)]">
-                  Edit ticker, kind, qty, and avg buy on the row. Live prices stay on the quote columns.
+                  Live prices stay on the quote columns. Edit a row to change ticker, kind, qty, or avg buy.
                 </p>
               </div>
+              <button
+                type="button"
+                className={investEdit ? 'glass-primary px-3 py-1.5 text-sm' : 'glass-btn px-3 py-1.5 text-sm'}
+                aria-pressed={investEdit}
+                onClick={() => {
+                  setInvestEdit((current) => !current)
+                  setEditHolding(null)
+                }}
+              >
+                {investEdit ? 'Done' : 'Edit'}
+              </button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="data-table min-w-[88rem] text-xs">
+            {(holdings.isLoading || (holdings.data?.length ?? 0) === 0) && (
+              <p className="px-6 py-8 text-sm text-[var(--muted)]">
+                {holdings.isLoading ? 'Loading holdings…' : 'No holdings yet. Add a ticker to pull live prices.'}
+              </p>
+            )}
+            <div className="lg:hidden">
+              {holdings.data?.map((row) => {
+                const currency = row.currency || row.quote?.currency || 'INR'
+                const pnlTone = Number(row.pnl ?? 0) > 0 ? 'text-[var(--mint)]' : Number(row.pnl ?? 0) < 0 ? 'text-[var(--danger)]' : ''
+                const body = (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium">{row.ticker || row.name}</div>
+                      <div className="text-[10px] text-[var(--muted)]">{kindLabel(row.kind)}</div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="tabular text-sm">
+                        {Number(row.quantity) ? formatMoney(row.currentValue, currency) : '—'}
+                      </div>
+                      <div className={`tabular text-[10px] ${pnlTone}`}>
+                        {Number(row.quantity) ? formatMoney(row.pnl, currency) : ''}
+                      </div>
+                    </div>
+                    {investEdit && <span className="shrink-0 text-sm font-semibold">Edit</span>}
+                  </>
+                )
+                return investEdit ? (
+                  <button
+                    key={row.id}
+                    type="button"
+                    className="flex w-full items-center gap-2 border-b border-[var(--line)] py-2 pr-3 pl-4 text-left"
+                    onClick={() => setEditHolding(row)}
+                  >
+                    {body}
+                  </button>
+                ) : (
+                  <div key={row.id} className="flex items-center gap-2 border-b border-[var(--line)] py-2 pr-3 pl-4">
+                    {body}
+                  </div>
+                )
+              })}
+            </div>
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="data-table invest-table min-w-[88rem] text-xs">
             <thead>
               <tr className="border-b border-[var(--line)] text-left text-[var(--muted)]">
                 {INVEST_COLS.map((label) => (
-                  <th key={label} className="whitespace-nowrap px-3 py-3 font-medium">
+                  <th
+                    key={label}
+                    className={`whitespace-nowrap px-3 py-3 font-medium${INVEST_CORE.has(label) ? '' : ' invest-extra'}`}
+                  >
                     {label}
                   </th>
                 ))}
-                <th className="px-3 py-3" />
+                {investEdit && <th className="px-3 py-3" />}
               </tr>
             </thead>
             <tbody>
-              {holdings.data?.length === 0 && (
-                <tr>
-                  <td colSpan={INVEST_COLS.length + 1} className="px-3 py-6 text-sm text-[var(--muted)]">
-                    No holdings yet. Add a ticker to pull live prices.
-                  </td>
-                </tr>
-              )}
               {holdings.data?.map((row) => {
                 const quote = row.quote
                 const currency = row.currency || quote?.currency || 'INR'
@@ -675,91 +701,57 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
                 const dayPct = quote?.dayChangePct
                 const dayTone = Number(day ?? 0) > 0 ? 'text-[var(--mint)]' : Number(day ?? 0) < 0 ? 'text-[var(--danger)]' : ''
                 return (
-                  <tr key={row.id} className="border-b border-[var(--line)]">
-                    <td className="sticky left-0 z-10 bg-[var(--surface)] px-1 py-1 whitespace-nowrap">
-                      <input
-                        className={investCell('min-w-[7rem] text-left font-medium')}
-                        value={holdingValue(row, 'ticker')}
-                        aria-label={`Ticker for ${row.ticker || row.name}`}
-                        onChange={(event) => setHoldingDraft(row.id, 'ticker', event.target.value)}
-                        onBlur={(event) => void saveHoldingTicker(row, event.target.value)}
-                      />
-                      <select
-                        className={investCell('min-w-[7rem] text-left text-[10px] text-[var(--muted)]')}
-                        value={row.kind}
-                        aria-label={`Kind for ${row.ticker || row.name}`}
-                        onChange={(event) => void patchHolding(row, { kind: event.target.value })}
-                      >
-                        {KINDS.includes(row.kind) ? null : (
-                          <option value={row.kind}>{row.kind.toLowerCase().replaceAll('_', ' ')}</option>
-                        )}
-                        {KINDS.map((option) => (
-                          <option key={option} value={option}>
-                            {option === 'COMMODITY' ? 'commodity' : option.toLowerCase().replaceAll('_', ' ')}
-                          </option>
-                        ))}
-                      </select>
+                  <tr
+                    key={row.id}
+                    className={`border-b border-[var(--line)]${investEdit ? ' cursor-pointer' : ''}`}
+                    onClick={investEdit ? () => setEditHolding(row) : undefined}
+                  >
+                    <td className="sticky left-0 z-10 min-w-[8rem] px-3 py-2 whitespace-nowrap">
+                      <div className="font-medium">{row.ticker || row.name}</div>
+                      <div className="text-[10px] text-[var(--muted)]">{kindLabel(row.kind)}</div>
                     </td>
-                    <td className="px-3 py-2 text-right tabular whitespace-nowrap">{formatMoney(quote?.ltp, currency)}</td>
-                    <td className={`px-3 py-2 text-right tabular whitespace-nowrap ${dayTone}`}>
+                    <td className="px-3 py-2 text-right tabular whitespace-nowrap invest-extra">{formatMoney(quote?.ltp, currency)}</td>
+                    <td className={`invest-extra px-3 py-2 text-right tabular whitespace-nowrap ${dayTone}`}>
                       {day == null ? '—' : `${formatSigned(day)} (${formatSigned(dayPct, 2)}%)`}
                     </td>
-                    <td className="px-1 py-0.5">
-                      <input
-                        className={investCell()}
-                        inputMode="decimal"
-                        value={holdingValue(row, 'avgBuy')}
-                        placeholder="—"
-                        aria-label={`Avg buy for ${row.ticker || row.name}`}
-                        onChange={(event) => setHoldingDraft(row.id, 'avgBuy', event.target.value)}
-                        onBlur={(event) => void saveHoldingNumber(row, 'avgBuy', event.target.value)}
-                      />
-                    </td>
-                    <td className="px-1 py-0.5">
-                      <input
-                        className={investCell()}
-                        inputMode="decimal"
-                        value={holdingValue(row, 'qty')}
-                        placeholder="—"
-                        aria-label={`Quantity for ${row.ticker || row.name}`}
-                        onChange={(event) => setHoldingDraft(row.id, 'qty', event.target.value)}
-                        onBlur={(event) => void saveHoldingNumber(row, 'quantity', event.target.value)}
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-right tabular whitespace-nowrap">{formatMoney(quote?.lastClose, currency)}</td>
                     <td className="px-3 py-2 text-right tabular whitespace-nowrap">
+                      {Number(row.avgBuy) ? formatMoney(row.avgBuy, currency) : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular whitespace-nowrap">
+                      {Number(row.quantity) ? row.quantity : '—'}
+                    </td>
+                    <td className="invest-extra px-3 py-2 text-right tabular whitespace-nowrap">{formatMoney(quote?.lastClose, currency)}</td>
+                    <td className="invest-extra px-3 py-2 text-right tabular whitespace-nowrap">
                       {Number(row.buyValue ?? row.amount) ? formatMoney(row.buyValue ?? row.amount, currency) : '—'}
                     </td>
                     <td className="px-3 py-2 text-right tabular whitespace-nowrap">
                       {Number(row.quantity) ? formatMoney(row.currentValue, currency) : '—'}
                     </td>
-                    <td className="px-3 py-2 text-right tabular whitespace-nowrap">
+                    <td className="invest-extra px-3 py-2 text-right tabular whitespace-nowrap">
                       {Number(row.quantity) && row.weight != null ? `${Number(row.weight).toFixed(2)}%` : '—'}
                     </td>
                     <td className={`px-3 py-2 text-right tabular whitespace-nowrap ${pnlTone}`}>
                       {Number(row.quantity) ? formatMoney(row.pnl, currency) : '—'}
                     </td>
-                    <td className={`px-3 py-2 text-right tabular whitespace-nowrap ${pnlTone}`}>
+                    <td className={`invest-extra px-3 py-2 text-right tabular whitespace-nowrap ${pnlTone}`}>
                       {Number(row.quantity) && row.pnlPct != null ? `${formatSigned(row.pnlPct)}%` : '—'}
                     </td>
-                    <td className="px-3 py-2 text-right tabular whitespace-nowrap">
+                    <td className="invest-extra px-3 py-2 text-right tabular whitespace-nowrap">
                       {quote?.marketCapLabel || formatCompact(quote?.marketCap)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular whitespace-nowrap">
+                    <td className="invest-extra px-3 py-2 text-right tabular whitespace-nowrap">
                       {quote?.peRatio == null ? '—' : Number(quote.peRatio).toFixed(2)}
                     </td>
-                    <td className="px-3 py-2 text-right tabular whitespace-nowrap">
+                    <td className="invest-extra px-3 py-2 text-right tabular whitespace-nowrap">
                       {quote?.volumeLabel || formatCompact(quote?.volume)}
                     </td>
-                    <td className="px-2 py-2">
-                      <TrashButton
-                        label={`Delete ${row.ticker || row.name}`}
-                        onClick={async () => {
-                          await api(`/api/finance/holdings/${row.id}`, { method: 'DELETE' })
-                          void queryClient.invalidateQueries({ queryKey: ['holdings'] })
-                        }}
-                      />
-                    </td>
+                    {investEdit && (
+                      <td className="px-2 py-2 text-right">
+                        <button type="button" className="px-2 text-sm font-semibold" onClick={() => setEditHolding(row)}>
+                          Edit
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )
               })}
@@ -792,63 +784,125 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
       {showBudget && (
         <div className="panel">
           <section className="card overflow-hidden p-0">
-            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--line)] px-6 py-4">
+            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[var(--line)] px-4 py-4 sm:px-6">
               <h2 className="text-2xl tracking-tight">Budget</h2>
               <div className="flex flex-wrap items-center gap-2 text-sm">
-                <label className="flex items-center gap-2 text-[var(--muted)]">
-                  From
-                  <input className="field w-auto py-1.5" type="month" value={from} onChange={(event) => setFrom(event.target.value)} />
-                </label>
-                <label className="flex items-center gap-2 text-[var(--muted)]">
-                  To
-                  <input className="field w-auto py-1.5" type="month" value={to} onChange={(event) => setTo(event.target.value)} />
-                </label>
-                <button type="button" className="glass-btn px-3 py-1.5 text-sm" onClick={() => setTo(nextMonth(to))}>
-                  Add month
+                <div className="hidden items-center gap-2 lg:flex">
+                  <label className="flex items-center gap-2 text-[var(--muted)]">
+                    From
+                    <input className="field w-auto py-1.5" type="month" value={from} onChange={(event) => setFrom(event.target.value)} />
+                  </label>
+                  <label className="flex items-center gap-2 text-[var(--muted)]">
+                    To
+                    <input className="field w-auto py-1.5" type="month" value={to} onChange={(event) => setTo(event.target.value)} />
+                  </label>
+                  <button type="button" className="glass-btn px-3 py-1.5 text-sm" onClick={() => setTo(nextMonth(to))}>
+                    Add month
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className={budgetEdit ? 'glass-primary px-3 py-1.5 text-sm' : 'glass-btn px-3 py-1.5 text-sm'}
+                  aria-pressed={budgetEdit}
+                  onClick={() => {
+                    setBudgetEdit((current) => !current)
+                    setEditLine(null)
+                    setEditCat(null)
+                  }}
+                >
+                  {budgetEdit ? 'Done' : 'Edit'}
                 </button>
               </div>
             </div>
             {workbook.isLoading && <p className="px-6 py-8 text-sm text-[var(--muted)]">Loading workbook…</p>}
             {workbook.data && (
-              <div className="overflow-x-auto">
-                <table className="data-table min-w-[52rem] text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--line)] text-left text-[var(--muted)]">
-                      <th className="sticky left-0 z-20 w-40 bg-[var(--surface)] px-3 py-3 font-medium">Category</th>
-                      <th className="sticky left-40 z-20 w-52 bg-[var(--surface)] px-3 py-3 font-medium">Name</th>
-                      {months.map((month) => (
-                        <th key={month} className="px-3 py-3 text-right font-medium">
-                          {monthLabel(month)}
-                        </th>
-                      ))}
-                      <th className="w-10 px-2 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {renderGroups(ledgerGroups)}
-                    {summaryRow(
-                      'Total Expenses',
-                      months.map((month) => totals[month]?.expenses),
-                    )}
-                    {renderGroups(incomeGroups)}
-                    {summaryRow(
-                      'Total to Receive',
-                      months.map((month) => totals[month]?.income),
-                    )}
-                    {summaryRow(
-                      'Balance',
-                      months.map((month) => totals[month]?.balance),
-                      true,
-                    )}
-                    {summaryRow(
-                      'Running Balance',
-                      months.map((month) => totals[month]?.running),
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="lg:hidden">
+                  <div className="flex items-center justify-between gap-2 px-2 py-1">
+                    <button
+                      type="button"
+                      className="grid size-10 place-items-center disabled:opacity-30"
+                      aria-label="Previous month"
+                      disabled={!months.includes(prevMonth(activeMonth))}
+                      onClick={() => setFocusMonth(prevMonth(activeMonth))}
+                    >
+                      <ChevronLeft size={20} strokeWidth={2} />
+                    </button>
+                    <div className="text-base font-semibold">{monthLabel(activeMonth)}</div>
+                    <button
+                      type="button"
+                      className="grid size-10 place-items-center disabled:opacity-30"
+                      aria-label="Next month"
+                      disabled={!months.includes(nextMonth(activeMonth))}
+                      onClick={() => setFocusMonth(nextMonth(activeMonth))}
+                    >
+                      <ChevronRight size={20} strokeWidth={2} />
+                    </button>
+                  </div>
+                  {monthListGroups(ledgerGroups)}
+                  {monthSummary('Total Expenses', totals[activeMonth]?.expenses)}
+                  {monthListGroups(incomeGroups)}
+                  {monthSummary('Total to Receive', totals[activeMonth]?.income)}
+                  {monthSummary('Balance', totals[activeMonth]?.balance, true)}
+                  {monthSummary('Running Balance', totals[activeMonth]?.running)}
+                  <div className="flex justify-end px-4 py-3">
+                    <button
+                      type="button"
+                      className="glass-btn px-3 py-1.5 text-sm"
+                      onClick={() => {
+                        const next = nextMonth(to)
+                        setTo(next)
+                        setFocusMonth(next)
+                      }}
+                    >
+                      Add month
+                    </button>
+                  </div>
+                </div>
+                <div className="hidden overflow-x-auto lg:block">
+                  <table className="data-table text-sm">
+                    <thead>
+                      <tr className="border-b border-[var(--line)] text-left text-[var(--muted)]">
+                        <th className="sticky left-0 z-20 min-w-[13rem] px-3 py-3 font-medium">Line</th>
+                        {months.map((month) => (
+                          <th
+                            key={month}
+                            className={`px-3 py-3 text-right font-medium${month === activeMonth ? ' text-[var(--fg)]' : ''}`}
+                          >
+                            <button type="button" className="w-full text-right" onClick={() => setFocusMonth(month)}>
+                              {monthLabel(month)}
+                            </button>
+                          </th>
+                        ))}
+                        {budgetEdit && <th className="w-10 px-2 py-3" />}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {renderGroups(ledgerGroups)}
+                      {summaryRow(
+                        'Total Expenses',
+                        months.map((month) => totals[month]?.expenses),
+                      )}
+                      {renderGroups(incomeGroups)}
+                      {summaryRow(
+                        'Total to Receive',
+                        months.map((month) => totals[month]?.income),
+                      )}
+                      {summaryRow(
+                        'Balance',
+                        months.map((month) => totals[month]?.balance),
+                        true,
+                      )}
+                      {summaryRow(
+                        'Running Balance',
+                        months.map((month) => totals[month]?.running),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
-            <p className="px-6 py-3 text-xs text-[var(--muted)]">
+            <p className="px-4 py-3 text-xs text-[var(--muted)] sm:px-6">
               Running balance is 0 in the first month, then adds each later month surplus, same as your sheet. Add month
               to keep going past this year.
             </p>
@@ -980,7 +1034,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
       )}
 
       {addLine && (
-        <Dialog title="Add line" onClose={() => setAddLine(false)}>
+        <Dialog title={lineCategory ? `Add line · ${lineCategory}` : 'Add line'} onClose={() => setAddLine(false)}>
           <form
             className="mt-4 space-y-3"
             onSubmit={async (event) => {
@@ -1011,7 +1065,7 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
             </label>
             <label className="block">
               <span className="mb-1 block text-xs text-[var(--muted)]">Name</span>
-              <input className="field" value={lineName} onChange={(e) => setLineName(e.target.value)} required />
+              <input className="field" value={lineName} onChange={(e) => setLineName(e.target.value)} required autoFocus />
             </label>
             <label className="block">
               <span className="mb-1 block text-xs text-[var(--muted)]">Kind</span>
@@ -1029,7 +1083,240 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
           </form>
         </Dialog>
       )}
+
+      {editLine && (
+        <LineEditDialog
+          key={`${editLine.item.id}:${editLine.month}`}
+          item={editLine.item}
+          month={editLine.month}
+          categories={categories}
+          onClose={() => setEditLine(null)}
+        />
+      )}
+
+      {editCat && (
+        <Dialog title="Rename category" onClose={() => setEditCat(null)}>
+          <form
+            className="mt-4 space-y-3"
+            onSubmit={async (event) => {
+              event.preventDefault()
+              await saveCategory(editCat, editCatName)
+              setEditCat(null)
+            }}
+          >
+            <label className="block">
+              <span className="mb-1 block text-xs text-[var(--muted)]">Category</span>
+              <input
+                className="field"
+                value={editCatName}
+                onChange={(event) => setEditCatName(event.target.value)}
+                required
+                autoFocus
+              />
+            </label>
+            <div className="flex justify-end pt-2">
+              <PrimaryButton type="submit">Save</PrimaryButton>
+            </div>
+          </form>
+        </Dialog>
+      )}
+
+      {editHolding && <HoldingEditDialog key={editHolding.id} row={editHolding} onClose={() => setEditHolding(null)} />}
     </div>
+  )
+}
+
+function LineEditDialog({
+  item,
+  month,
+  categories,
+  onClose,
+}: {
+  item: WorkbookItem
+  month: string
+  categories: string[]
+  onClose: () => void
+}) {
+  const queryClient = useQueryClient()
+  const [name, setName] = useState(item.name)
+  const [category, setCategory] = useState(item.category)
+  const [kind, setKind] = useState(item.kind)
+  const [amount, setAmount] = useState(item.amounts[month] == null ? '' : String(item.amounts[month]))
+  const [saving, setSaving] = useState(false)
+
+  return (
+    <Dialog title={`${item.name} · ${monthLabel(month)}`} onClose={onClose}>
+      <form
+        className="mt-4 space-y-3"
+        onSubmit={async (event) => {
+          event.preventDefault()
+          const nextName = name.trim()
+          const nextCategory = category.trim()
+          if (!nextName || !nextCategory) return
+          const next = parseAmount(amount)
+          if (next == null && amount.trim() !== '') return
+          setSaving(true)
+          try {
+            if (nextName !== item.name || nextCategory !== item.category || kind !== item.kind) {
+              await api(`/api/finance/workbook/items/${item.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ name: nextName, category: nextCategory, kind }),
+              })
+            }
+            if (!sameAmount(item.amounts[month], next)) {
+              await api('/api/finance/workbook/cell', {
+                method: 'PATCH',
+                body: JSON.stringify({ itemId: item.id, month, amount: next }),
+              })
+            }
+            await queryClient.invalidateQueries({ queryKey: ['workbook'] })
+            void queryClient.invalidateQueries({ queryKey: ['fin-portfolio'] })
+            onClose()
+          } finally {
+            setSaving(false)
+          }
+        }}
+      >
+        <label className="block">
+          <span className="mb-1 block text-xs text-[var(--muted)]">Name</span>
+          <input className="field" value={name} onChange={(event) => setName(event.target.value)} required />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs text-[var(--muted)]">Category</span>
+          <input
+            className="field"
+            list="edit-line-categories"
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            required
+          />
+          <datalist id="edit-line-categories">
+            {categories.map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs text-[var(--muted)]">Kind</span>
+          <select className="field" value={kind} onChange={(event) => setKind(event.target.value)}>
+            {LINE_KINDS.includes(kind) ? null : <option value={kind}>{kindLabel(kind)}</option>}
+            {LINE_KINDS.map((option) => (
+              <option key={option} value={option}>
+                {option.toLowerCase()}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs text-[var(--muted)]">Amount · {monthLabel(month)}</span>
+          <input
+            className="field text-right tabular"
+            inputMode="decimal"
+            value={amount}
+            aria-label={`${name || item.name} for ${monthLabel(month)}`}
+            autoFocus
+            onChange={(event) => setAmount(event.target.value)}
+          />
+        </label>
+        <div className="flex items-center justify-between gap-2 pt-2">
+          <TrashButton
+            label={`Delete ${item.name}`}
+            onClick={async () => {
+              await api(`/api/finance/workbook/items/${item.id}`, { method: 'DELETE' })
+              void queryClient.invalidateQueries({ queryKey: ['workbook'] })
+              onClose()
+            }}
+          />
+          <PrimaryButton type="submit" disabled={saving}>
+            Save
+          </PrimaryButton>
+        </div>
+      </form>
+    </Dialog>
+  )
+}
+
+function HoldingEditDialog({ row, onClose }: { row: Holding; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const [ticker, setTicker] = useState(row.ticker || row.name || '')
+  const [name, setName] = useState(row.name && row.name !== row.ticker ? row.name : '')
+  const [kind, setKind] = useState(row.kind)
+  const [qty, setQty] = useState(row.quantity == null ? '' : String(row.quantity))
+  const [avgBuy, setAvgBuy] = useState(row.avgBuy == null ? '' : String(row.avgBuy))
+  const [saving, setSaving] = useState(false)
+
+  return (
+    <Dialog title={row.ticker || row.name} onClose={onClose}>
+      <form
+        className="mt-4 space-y-3"
+        onSubmit={async (event) => {
+          event.preventDefault()
+          const symbol = ticker.trim().toUpperCase()
+          if (!symbol) return
+          setSaving(true)
+          try {
+            await api(`/api/finance/holdings/${row.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({
+                ticker: symbol,
+                name: name.trim() || symbol,
+                kind,
+                quantity: parseAmount(qty) ?? 0,
+                avgBuy: parseAmount(avgBuy) ?? 0,
+              }),
+            })
+            void queryClient.invalidateQueries({ queryKey: ['holdings'] })
+            void queryClient.invalidateQueries({ queryKey: ['fin-portfolio'] })
+            onClose()
+          } finally {
+            setSaving(false)
+          }
+        }}
+      >
+        <label className="block">
+          <span className="mb-1 block text-xs text-[var(--muted)]">Ticker</span>
+          <input className="field" value={ticker} onChange={(event) => setTicker(event.target.value)} required autoFocus />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs text-[var(--muted)]">Name</span>
+          <input className="field" value={name} onChange={(event) => setName(event.target.value)} placeholder="Optional" />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs text-[var(--muted)]">Kind</span>
+          <select className="field" value={kind} onChange={(event) => setKind(event.target.value)}>
+            {KINDS.includes(kind) ? null : <option value={kind}>{kindLabel(kind)}</option>}
+            {KINDS.map((option) => (
+              <option key={option} value={option}>
+                {kindLabel(option)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="mb-1 block text-xs text-[var(--muted)]">Qty.</span>
+            <input className="field" inputMode="decimal" value={qty} onChange={(event) => setQty(event.target.value)} />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-[var(--muted)]">Avg. Buy</span>
+            <input className="field" inputMode="decimal" value={avgBuy} onChange={(event) => setAvgBuy(event.target.value)} />
+          </label>
+        </div>
+        <div className="flex items-center justify-between gap-2 pt-2">
+          <TrashButton
+            label={`Delete ${row.ticker || row.name}`}
+            onClick={async () => {
+              await api(`/api/finance/holdings/${row.id}`, { method: 'DELETE' })
+              void queryClient.invalidateQueries({ queryKey: ['holdings'] })
+              onClose()
+            }}
+          />
+          <PrimaryButton type="submit" disabled={saving}>
+            Save
+          </PrimaryButton>
+        </div>
+      </form>
+    </Dialog>
   )
 }
 

@@ -38,3 +38,19 @@ export function minutesNow() {
   const now = new Date()
   return now.getHours() * 60 + now.getMinutes()
 }
+
+const DAY_MIN = 24 * 60
+
+export function timesOverlap(startA: number, endA: number, startB: number, endB: number) {
+  return spanPieces(startA, endA).some(([a0, a1]) => spanPieces(startB, endB).some(([b0, b1]) => a0 < b1 && b0 < a1))
+}
+
+function spanPieces(start: number, end: number): [number, number][] {
+  const stop = end === 0 ? DAY_MIN : end
+  if (stop > start) return [[start, stop]]
+  if (stop === start) return []
+  return [
+    [start, DAY_MIN],
+    [0, stop],
+  ]
+}

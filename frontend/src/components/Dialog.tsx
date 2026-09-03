@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Glyph } from './Glyph'
-import { ChevronLeft } from 'lucide'
+import { ChevronLeft, X } from 'lucide'
 
 export function Dialog({
   title,
@@ -32,8 +32,6 @@ export function Dialog({
     }
   }, [onBack, onClose])
 
-  const stacked = onBack != null || action != null
-
   return (
     <div className="fixed inset-0 flex items-end justify-center p-4 sm:items-center" style={{ zIndex: 40 + layer * 10 }}>
       <button
@@ -49,25 +47,20 @@ export function Dialog({
         className="sheet relative max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)))] w-full max-w-lg overflow-y-auto p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
         style={{ overscrollBehavior: 'contain' }}
       >
-        {stacked ? (
-          <div className="-mx-2 mb-2 flex items-center gap-1">
-            {onBack ? (
-              <button type="button" className="grid size-10 place-items-center" aria-label="Back" onClick={onBack}>
-                <Glyph icon={ChevronLeft} size={22} />
-              </button>
-            ) : (
-              <span className="size-10" />
-            )}
-            <h2 id="dialog-title" className="min-w-0 flex-1 text-center text-base font-semibold">
-              {title}
-            </h2>
-            {action ?? <span className="size-10" />}
-          </div>
-        ) : (
-          <h2 id="dialog-title" className="text-base font-semibold">
+        <div className="sticky top-0 z-[1] -mx-2 -mt-1 mb-2 flex items-center gap-1 bg-[var(--surface)]">
+          {onBack ? (
+            <button type="button" className="grid size-10 shrink-0 place-items-center" aria-label="Back" onClick={onBack}>
+              <Glyph icon={ChevronLeft} size={22} />
+            </button>
+          ) : null}
+          <h2 id="dialog-title" className={cn('min-w-0 flex-1 text-base font-semibold', onBack && 'text-center')}>
             {title}
           </h2>
-        )}
+          {action}
+          <button type="button" className="grid size-10 shrink-0 place-items-center" aria-label="Close" onClick={onClose}>
+            <Glyph icon={X} size={22} />
+          </button>
+        </div>
         {children}
       </div>
     </div>

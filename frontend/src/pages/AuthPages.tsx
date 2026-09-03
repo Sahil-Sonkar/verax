@@ -245,7 +245,7 @@ export function RegisterPage() {
 
 function AuthFrame({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="relative flex min-h-dvh items-center justify-center bg-[var(--bg)] px-4 py-10">
+    <div className="relative flex min-h-dvh items-center justify-center bg-[var(--bg)] px-4 pt-[max(2.5rem,calc(env(safe-area-inset-top)+1.25rem))] pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.25rem))]">
       <div className="grain" aria-hidden="true" />
       <a href="#auth-main" className="skip-link">
         Skip to content
@@ -253,7 +253,7 @@ function AuthFrame({ title, subtitle, children }: { title: string; subtitle: str
       <div id="auth-main" className="relative w-full max-w-[380px]">
         <InstallHint />
       <div className="panel">
-        <div className="card px-10 py-12">
+        <div className="card px-6 py-8 sm:px-10 sm:py-12">
           <div className="wordmark mb-8 text-center text-5xl leading-none" translate="no">
             Verax
           </div>

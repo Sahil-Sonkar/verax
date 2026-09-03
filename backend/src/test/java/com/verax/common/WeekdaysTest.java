@@ -30,4 +30,12 @@ class WeekdaysTest {
     void formatRoundTrip() {
         assertEquals("1,3,5", Weekdays.format(List.of(5, 1, 3, 1)));
     }
+
+    @Test
+    void shareAnyOnCommonDays() {
+        assertTrue(Weekdays.shareAny("1,2", "2,3"));
+        assertFalse(Weekdays.shareAny("1", "2"));
+        assertTrue(Weekdays.shareAny(Weekdays.ALL, "2"));
+        assertTrue(Weekdays.shareAny("", "2"));
+    }
 }
