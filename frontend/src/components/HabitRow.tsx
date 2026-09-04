@@ -1,3 +1,4 @@
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { CompletionStatus, HabitItem } from '../types'
 import { importanceLabel } from '../lib/format'
 import { categoryColor } from '../lib/colors'
@@ -51,7 +52,7 @@ export function HabitRow({
                 onClick={() => onStatus(item.habit.id, item.status === 'COMPLETED' ? 'MISSED' : 'COMPLETED')}
                 aria-pressed={item.status === 'COMPLETED'}
                 aria-label={`Mark ${item.habit.name} ${item.status === 'COMPLETED' ? 'missed' : 'done'}`}
-                className="grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                className="grid size-11 shrink-0 place-items-center rounded-full text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 style={{
                   background: item.status === 'COMPLETED' ? 'var(--mint)' : accent,
                   opacity: item.status === 'COMPLETED' ? 1 : 0.85,
@@ -88,24 +89,29 @@ export function HabitRow({
           </div>
         </div>
         {!isGroup && !isWater(item) && (
-          <div className="control-cluster pl-8 sm:pl-0" role="group" aria-label={`${item.habit.name} status`}>
+          <ToggleGroup
+            type="single"
+            value={item.status}
+            onValueChange={(value) => {
+              if (value) onStatus(item.habit.id, value as CompletionStatus)
+            }}
+            aria-label={`${item.habit.name} status`}
+            className="pl-11 sm:pl-0"
+          >
             {STATUSES.map((status) => (
-              <button
+              <ToggleGroupItem
                 key={status.value}
-                type="button"
-                aria-pressed={item.status === status.value}
-                onClick={() => onStatus(item.habit.id, status.value)}
-                className="px-2.5 py-1 text-[11px] tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                value={status.value}
                 style={
                   item.status === status.value
                     ? { background: `color-mix(in srgb, ${status.color} 32%, transparent)`, color: status.color }
-                    : { color: 'var(--muted)' }
+                    : undefined
                 }
               >
                 {status.label}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
         )}
       </div>
       {!isGroup && isWater(item) && (

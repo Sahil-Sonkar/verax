@@ -533,7 +533,7 @@ export function FuelPage() {
           <button
             key={dayKey}
             type="button"
-            className={`grid size-9 place-items-center rounded-[9px] text-xs font-semibold ${
+            className={`grid size-10 place-items-center rounded-[9px] text-xs font-semibold ${
               dayKey === date ? 'bg-[var(--fg)] text-[var(--bg)]' : 'text-[var(--muted)]'
             }`}
             onClick={() => setDate(dayKey)}
@@ -543,7 +543,7 @@ export function FuelPage() {
         ))}
       </div>
 
-      <div className="flex border-b border-[var(--line)] bg-[var(--bg)] px-2">
+      <div className="flex overflow-x-auto border-b border-[var(--line)] bg-[var(--bg)] px-2">
         {([
           { id: 'diary', label: 'Diary' },
           { id: 'recipes', label: 'Recipes' },
@@ -553,7 +553,7 @@ export function FuelPage() {
           <button
             key={item.id}
             type="button"
-            className={`min-w-0 flex-1 truncate px-0.5 py-3 text-[12px] font-semibold sm:text-sm ${
+            className={`shrink-0 px-3 py-3 text-[13px] font-semibold ${
               tab === item.id ? 'text-[var(--diary-blue)] shadow-[inset_0_-2px_0_var(--diary-blue)]' : 'text-[var(--muted)]'
             }`}
             onClick={() => setTab(item.id)}

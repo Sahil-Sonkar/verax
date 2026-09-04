@@ -85,7 +85,7 @@ export function DashboardPage() {
         </section>
       )}
 
-      <section>
+      <section className="min-w-0">
         <div className="mb-5 flex items-end justify-between gap-4">
           <h2 className="text-base font-semibold">How the days went</h2>
           <Link

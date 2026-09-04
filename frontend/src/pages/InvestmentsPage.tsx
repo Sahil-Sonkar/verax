@@ -1,24 +1,14 @@
-import { Fragment, useId, useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 import { api } from '../lib/api'
 import { formatCompact, formatInr, formatMoney, formatSigned, parseAmount } from '../lib/format'
 import { Dialog, PrimaryButton } from '../components/Dialog'
 import { AddButton, TrashButton } from '../components/IconButtons'
 import { SankeyFlow, type FlowChart } from '../components/SankeyFlow'
+import { MonoArea } from '../components/mono/MonoArea'
+import { MonoDonut } from '../components/mono/MonoDonut'
+import { BLOCK_COLORS, TONE } from '../lib/colors'
 import type { Holding, MonthTotal, Workbook, WorkbookItem } from '../types'
 
 const KINDS = [
@@ -64,24 +54,16 @@ const KIND_CATEGORY: Record<string, string> = {
   FD: 'FD',
 }
 const CATEGORY_COLORS: Record<string, string> = {
-  Stocks: '#3d7ec9',
-  'Mutual funds': '#7a5ea8',
-  Commodity: '#c4923a',
-  Crypto: '#c45b72',
-  EPF: '#3d8b5c',
-  PPF: '#5b9bd6',
-  FD: '#6f6e6a',
-  Other: '#9c9a94',
+  Stocks: TONE.sky,
+  'Mutual funds': TONE.violet,
+  Commodity: TONE.brass,
+  Crypto: TONE.pink,
+  EPF: TONE.mint,
+  PPF: TONE.sage,
+  FD: TONE.warn,
+  Other: TONE.sky,
 }
-const SLICE_PALETTE = ['#3d7ec9', '#c94b52', '#c4923a', '#5b9bd6', '#7a5ea8', '#3d8b5c', '#c45b72', '#4a8f5c', '#6f6e6a', '#d4ae6a']
-const CHART_TOOLTIP = {
-  background: 'color-mix(in srgb, var(--surface) 94%, transparent)',
-  border: '0.5px solid var(--line)',
-  borderRadius: 8,
-  color: 'var(--fg)',
-  fontSize: 12,
-}
-const CHART_TICK = { fill: 'var(--muted)', fontSize: 11, fontFamily: 'var(--font-mono)' }
+const SLICE_PALETTE = BLOCK_COLORS
 
 function monthLabel(yearMonth: string) {
   const [year, month] = yearMonth.split('-').map(Number)
@@ -1326,7 +1308,6 @@ function HoldingEditDialog({ row, onClose }: { row: Holding; onClose: () => void
 }
 
 function RunningBalanceChart({ months, totals }: { months: string[]; totals: Record<string, MonthTotal> }) {
-  const fillId = useId().replace(/:/g, '')
   const data = months.map((month) => ({
     month,
     label: monthLabel(month),
@@ -1338,7 +1319,6 @@ function RunningBalanceChart({ months, totals }: { months: string[]; totals: Rec
   const delta = latest - previous
   const down = latest < 0
   const stroke = down ? 'var(--danger)' : 'var(--mint)'
-  const fill = down ? 'var(--danger)' : 'var(--mint)'
 
   return (
     <>
@@ -1358,50 +1338,7 @@ function RunningBalanceChart({ months, totals }: { months: string[]; totals: Rec
           )}
         </div>
       </div>
-      <div className="mt-6 h-72">
-        <ResponsiveContainer>
-          <AreaChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
-            <defs>
-              <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={fill} stopOpacity={0.35} />
-                <stop offset="100%" stopColor={fill} stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid stroke="var(--line)" vertical={false} />
-            <XAxis dataKey="label" tick={CHART_TICK} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-            <YAxis
-              tick={CHART_TICK}
-              axisLine={false}
-              tickLine={false}
-              width={56}
-              tickFormatter={(value) => formatCompact(Number(value))}
-            />
-            <ReferenceLine y={0} stroke="var(--line)" />
-            <Tooltip
-              contentStyle={CHART_TOOLTIP}
-              formatter={(value, name) => [
-                formatInr(Number(value)),
-                name === 'running' ? 'Running' : 'This month',
-              ]}
-              labelFormatter={(label, payload) => {
-                const row = payload?.[0]?.payload as { label?: string; balance?: number } | undefined
-                if (!row) return String(label)
-                return `${row.label} · surplus ${formatInr(row.balance ?? 0)}`
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey="running"
-              name="running"
-              stroke={stroke}
-              strokeWidth={2.25}
-              fill={`url(#${fillId})`}
-              dot={{ r: data.length < 14 ? 3.5 : 0, fill: stroke, stroke: 'var(--surface)', strokeWidth: 1.5 }}
-              activeDot={{ r: 5, fill: stroke, stroke: 'var(--surface)', strokeWidth: 2 }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+      <MonoArea className="mt-6 h-72" data={data} valueKey="running" color={stroke} format={formatInr} />
     </>
   )
 }
@@ -1411,25 +1348,7 @@ function InvestPie({ title, slices }: { title: string; slices: { name: string; v
   return (
     <div>
       <h3 className="text-xs font-semibold tracking-wide text-[var(--muted)] uppercase">{title}</h3>
-      <div className="h-72">
-        <ResponsiveContainer>
-          <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-            <Pie data={slices} dataKey="value" nameKey="name" innerRadius={52} outerRadius={88} paddingAngle={1.5}>
-              {slices.map((slice) => (
-                <Cell key={slice.name} fill={slice.color} />
-              ))}
-            </Pie>
-            <Tooltip
-              contentStyle={CHART_TOOLTIP}
-              formatter={(value, name) => {
-                const amount = Number(value ?? 0)
-                const share = total > 0 ? (amount / total) * 100 : 0
-                return [`${formatInr(amount)} · ${share.toFixed(1)}%`, String(name)]
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
+      <MonoDonut className="h-72" data={slices} center={formatInr(total)} />
       <ul className="mt-1 flex max-h-40 flex-wrap gap-x-4 gap-y-1.5 overflow-y-auto text-xs">
         {slices.map((slice) => (
           <li key={slice.name} className="flex items-center gap-1.5">

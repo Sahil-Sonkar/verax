@@ -33,7 +33,7 @@ export function Dialog({
   }, [onBack, onClose])
 
   return (
-    <div className="fixed inset-0 flex items-end justify-center p-4 sm:items-center" style={{ zIndex: 40 + layer * 10 }}>
+    <div className="fixed inset-0 flex items-end justify-center sm:items-center sm:p-4" style={{ zIndex: 40 + layer * 10 }}>
       <button
         type="button"
         className="absolute inset-0 cursor-default bg-[color-mix(in_srgb,var(--fg)_42%,transparent)]"
@@ -44,7 +44,7 @@ export function Dialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="dialog-title"
-        className="sheet relative max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)))] w-full max-w-lg overflow-y-auto p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        className="sheet relative max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)))] w-full max-w-lg overflow-y-auto rounded-b-none p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:rounded-[20px]"
         style={{ overscrollBehavior: 'contain' }}
       >
         <div className="sticky top-0 z-[1] -mx-2 -mt-1 mb-2 flex items-center gap-1 bg-[var(--surface)]">

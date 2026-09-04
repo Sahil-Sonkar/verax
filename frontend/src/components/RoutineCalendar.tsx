@@ -12,6 +12,7 @@ import {
   startOfWeek,
 } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { DEFAULT_SWATCH } from '../lib/colors'
 import { isoWeekday, minutesNow } from '../lib/weekdays'
 import type { GoogleCalendarEvent, RoutineBlock, RoutineDay } from '../types'
 
@@ -287,7 +288,7 @@ function WeekGrid({
                         style={{
                           top,
                           height: h,
-                          background: block.color || '#0095f6',
+                          background: block.color || DEFAULT_SWATCH,
                           outline: activeId === block.id ? '2px solid var(--fg)' : undefined,
                         }}
                         onPointerDown={(event) => onEventPointerDown(block, event)}
@@ -426,7 +427,7 @@ function MonthGrid({
                       type="button"
                       className="routine-event flex w-full items-center gap-1 px-1 py-0.5"
                       style={{
-                        background: block.color || '#0095f6',
+                        background: block.color || DEFAULT_SWATCH,
                         outline: activeId === block.id ? '2px solid var(--fg)' : undefined,
                       }}
                       onClick={() => {

@@ -1,7 +1,8 @@
-import { Check, Pencil } from 'lucide'
+import { Check } from 'lucide'
 import { Link } from 'react-router-dom'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Glyph } from './Glyph'
-import { categoryColor } from '../lib/colors'
+import { habitColor } from '../lib/colors'
 import { habitIcon } from '../lib/habitIcons'
 import { isWaterHabit } from '../lib/dailyHabits'
 import type { CompletionStatus, HabitItem } from '../types'
@@ -18,15 +19,15 @@ export function TrackerHabitRow({
   trail,
   waterLiters,
   onStatus,
-  onEdit,
+  onOpen,
 }: {
   item: HabitItem
   trail: { date: string; status?: string }[]
   waterLiters?: number
   onStatus: (habitId: string, status: CompletionStatus, value?: number) => void
-  onEdit?: () => void
+  onOpen?: () => void
 }) {
-  const accent = categoryColor(item.habit.category?.name, item.habit.category?.color)
+  const accent = habitColor(item.habit.id)
   const done = item.status === 'COMPLETED'
   const half = item.status === 'PARTIAL'
   const Icon = habitIcon(item.habit.icon)
@@ -40,6 +41,7 @@ export function TrackerHabitRow({
       : target
         ? `${target} ${unit}`.trim()
         : item.periodProgress
+  const days = trail.slice(-7)
 
   return (
     <div className="border-b border-[var(--line)] py-3 last:border-b-0">
@@ -49,7 +51,7 @@ export function TrackerHabitRow({
           onClick={() => onStatus(item.habit.id, done ? 'MISSED' : 'COMPLETED')}
           aria-pressed={done}
           aria-label={`Mark ${item.habit.name} ${done ? 'missed' : 'done'}`}
-          className="grid size-10 shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          className="grid size-11 shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
         >
           <span
             className="grid size-7 place-items-center rounded-full text-white"
@@ -62,69 +64,86 @@ export function TrackerHabitRow({
             {done ? <Glyph icon={Check} size={16} strokeWidth={2.5} /> : <Glyph icon={Icon} size={15} />}
           </span>
         </button>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1">
-            <div className="min-w-0 flex-1 truncate text-[15px]">{item.habit.name}</div>
-            {onEdit ? (
-              <button
-                type="button"
-                className="grid size-10 shrink-0 place-items-center rounded-[8px] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                aria-label={`Edit ${item.habit.name}`}
-                onClick={onEdit}
-              >
-                <Glyph icon={Pencil} size={15} />
-              </button>
-            ) : null}
-          </div>
-          {detail ? (
-            water ? (
-              <Link to="/body" className="truncate text-xs text-[var(--muted)] underline-offset-4 hover:underline">
-                {detail}
-              </Link>
-            ) : (
-              <div className="truncate text-xs text-[var(--muted)]">{detail}</div>
-            )
-          ) : null}
-        </div>
-        <div className="ml-auto flex shrink-0 items-end gap-1" aria-hidden="true">
-          {trail.slice(-7).map((day) => (
-            <span key={day.date} className="flex w-4 flex-col items-center gap-1">
-              <span className="text-[9px] leading-none text-[var(--muted)]">
-                {new Date(day.date + 'T00:00:00').toLocaleString(undefined, { weekday: 'narrow' })}
-              </span>
-              <span
-                className="size-2.5 rounded-[2px]"
-                style={{
-                  background:
-                    day.status === 'COMPLETED'
-                      ? accent
-                      : day.status === 'PARTIAL'
-                        ? `color-mix(in srgb, ${accent} 45%, var(--surface-2))`
-                        : 'var(--surface-2)',
-                }}
-              />
-            </span>
-          ))}
-        </div>
-      </div>
-      <div className="control-cluster mt-2 pl-11" role="group" aria-label={`${item.habit.name} status`}>
-        {STATUSES.map((status) => (
-          <button
-            key={status.value}
-            type="button"
-            aria-pressed={item.status === status.value}
-            onClick={() => onStatus(item.habit.id, status.value)}
-            className="px-2.5 py-1 text-[11px] tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-            style={
-              item.status === status.value
-                ? { background: `color-mix(in srgb, ${accent} 22%, transparent)`, color: accent }
-                : { color: 'var(--muted)' }
-            }
-          >
-            {status.label}
+        {onOpen ? (
+          <button type="button" className="min-w-0 flex-1 text-left" onClick={onOpen}>
+            <HabitLabel name={item.habit.name} detail={detail} water={water} />
           </button>
-        ))}
+        ) : (
+          <div className="min-w-0 flex-1">
+            <HabitLabel name={item.habit.name} detail={detail} water={water} />
+          </div>
+        )}
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {days.length > 0 && (
+            <div className="flex gap-1" aria-hidden="true">
+              {days.map((day) => (
+                <span key={day.date} className="flex flex-col items-center gap-1">
+                  <span className="text-[10px] leading-none text-[var(--muted)]">
+                    {new Date(day.date + 'T00:00:00').toLocaleString(undefined, { weekday: 'narrow' })}
+                  </span>
+                  <span
+                    className="size-2.5 rounded-[2px]"
+                    style={{
+                      background:
+                        day.status === 'COMPLETED'
+                          ? accent
+                          : day.status === 'PARTIAL'
+                            ? `color-mix(in srgb, ${accent} 45%, var(--surface-2))`
+                            : day.status === 'MISSED' || day.status === 'SKIPPED'
+                              ? 'var(--fg)'
+                              : 'var(--surface-2)',
+                    }}
+                  />
+                </span>
+              ))}
+            </div>
+          )}
+          <ToggleGroup
+            type="single"
+            value={item.status}
+            onValueChange={(value) => {
+              if (value) onStatus(item.habit.id, value as CompletionStatus)
+            }}
+            aria-label={`${item.habit.name} status`}
+            className="shrink-0"
+          >
+            {STATUSES.map((status) => (
+              <ToggleGroupItem
+                key={status.value}
+                value={status.value}
+                style={
+                  item.status === status.value
+                    ? { background: `color-mix(in srgb, ${accent} 22%, transparent)`, color: accent }
+                    : undefined
+                }
+              >
+                {status.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
       </div>
     </div>
+  )
+}
+
+function HabitLabel({ name, detail, water }: { name: string; detail?: string; water: boolean }) {
+  return (
+    <>
+      <div className="truncate text-[15px]">{name}</div>
+      {detail ? (
+        water ? (
+          <Link
+            to="/body"
+            className="truncate text-xs text-[var(--muted)] underline-offset-4 hover:underline"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {detail}
+          </Link>
+        ) : (
+          <div className="truncate text-xs text-[var(--muted)]">{detail}</div>
+        )
+      ) : null}
+    </>
   )
 }

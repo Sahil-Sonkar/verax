@@ -99,6 +99,7 @@ export type HeatCell = {
   percent: number
   level: number
   completed?: number
+  status?: string
 }
 
 export type HabitTrail = {

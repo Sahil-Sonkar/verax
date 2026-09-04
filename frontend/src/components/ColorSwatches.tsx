@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { BLOCK_COLORS } from '../lib/colors'
+import { BLOCK_COLORS, DEFAULT_SWATCH } from '../lib/colors'
 
 export function ColorSwatches({
   value,
@@ -8,7 +8,7 @@ export function ColorSwatches({
   value: string
   onChange: (next: string) => void
 }) {
-  const current = value || '#0095f6'
+  const current = value || DEFAULT_SWATCH
   return (
     <div>
       <div className="mb-1 text-xs text-[var(--muted)]">Color</div>
@@ -27,7 +27,7 @@ export function ColorSwatches({
         <label className="color-swatch custom" title="Custom color">
           <input
             type="color"
-            value={/^#[0-9a-fA-F]{6}$/.test(current) ? current : '#0095f6'}
+            value={/^#[0-9a-fA-F]{6}$/.test(current) ? current : DEFAULT_SWATCH}
             onChange={(event) => onChange(event.target.value)}
           />
         </label>

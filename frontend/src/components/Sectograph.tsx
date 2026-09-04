@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { arc as d3arc } from 'd3'
+import { DEFAULT_SWATCH } from '../lib/colors'
 import { formatClock, minutesNow } from '../lib/weekdays'
 import type { RoutineBlock } from '../types'
 
@@ -8,7 +9,7 @@ const CX = SIZE / 2
 const CY = SIZE / 2
 const INNER = 92
 const OUTER = 168
-const FALLBACK = '#0095f6'
+const FALLBACK = DEFAULT_SWATCH
 
 type Slice = {
   id: string

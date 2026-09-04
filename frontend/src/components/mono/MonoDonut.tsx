@@ -1,33 +1,33 @@
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
+import { Cell, Pie, PieChart, Tooltip } from 'recharts'
+import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
+import { cn } from '@/lib/utils'
+import { CHART_TOOLTIP } from './theme'
 
-type Slice = { name: string; value: number }
+type Slice = { name: string; value: number; color?: string }
 
-const TOOLTIP = {
-  background: 'color-mix(in srgb, var(--surface) 94%, transparent)',
-  border: '0.5px solid var(--line)',
-  borderRadius: 8,
-  color: 'var(--fg)',
-  fontSize: 12,
-}
-
-function shade(index: number, total: number) {
-  const t = total <= 1 ? 1 : 1 - index / total
-  return `color-mix(in srgb, var(--fg) ${Math.round(28 + t * 72)}%, transparent)`
+function shade(index: number) {
+  return `var(--chart-${(index % 5) + 1})`
 }
 
 export function MonoDonut({
   data,
   center,
+  className,
 }: {
   data: Slice[]
   center?: string
+  className?: string
 }) {
   const rows = data.filter((row) => row.value > 0)
   const total = rows.reduce((sum, row) => sum + row.value, 0)
   if (rows.length === 0 || total <= 0) return null
+  const config = Object.fromEntries(
+    rows.map((row, index) => [row.name, { label: row.name, color: row.color ?? shade(index) }]),
+  ) satisfies ChartConfig
+
   return (
-    <div className="relative h-64">
-      <ResponsiveContainer>
+    <div className={cn('relative h-64', className)}>
+      <ChartContainer config={config} className="aspect-auto h-full w-full">
         <PieChart>
           <Pie
             data={rows}
@@ -40,17 +40,17 @@ export function MonoDonut({
             cornerRadius={8}
           >
             {rows.map((row, index) => (
-              <Cell key={row.name} fill={shade(index, rows.length)} />
+              <Cell key={row.name} fill={row.color ?? shade(index)} />
             ))}
           </Pie>
-          <Tooltip contentStyle={TOOLTIP} formatter={(value, name) => [String(value), String(name)]} />
+          <Tooltip contentStyle={CHART_TOOLTIP} />
         </PieChart>
-      </ResponsiveContainer>
+      </ChartContainer>
       {center != null && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center">
           <div className="text-center">
             <div className="text-lg font-semibold tabular">{center}</div>
-            <div className="text-[11px] text-[var(--muted)]">total</div>
+            <div className="text-[11px] text-muted-foreground">total</div>
           </div>
         </div>
       )}

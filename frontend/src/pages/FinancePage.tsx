@@ -1,7 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Dialog, PrimaryButton } from '../components/Dialog'
+import { MonoLine } from '../components/mono/MonoLine'
+import { BLOCK_COLORS } from '../lib/colors'
 import { AddButton, TrashButton } from '../components/IconButtons'
 import { SankeyFlow } from '../components/SankeyFlow'
 import { api } from '../lib/api'
@@ -9,7 +10,7 @@ import { formatCompact, formatInr } from '../lib/format'
 import { InvestmentsPage } from './InvestmentsPage'
 import type { FinanceAccount, FinanceLoan, FinanceLoanPayment, Portfolio, PriceQuote, TaxCompare, TaxItem } from '../types'
 
-const LOAN_LINE_COLORS = ['#0095f6', '#e1306c', '#fcaf45', '#00c853', '#833ab4', '#405de6', '#f77737', '#00bcd4']
+const LOAN_LINE_COLORS = BLOCK_COLORS
 
 const TABS = [
   { id: 'invest', label: 'Invest' },
@@ -121,7 +122,7 @@ export function FinancePage() {
     <div className="space-y-8">
       <div>
         <p className="kicker">Ledgers</p>
-        <h1 className="mt-2 text-5xl tracking-tight">Money</h1>
+        <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Money</h1>
         <p className="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-[var(--muted)]">
           Live prices from Google Finance. Budget stays a workbook.
         </p>
@@ -1078,35 +1079,16 @@ function TenureChart({ loans }: { loans: FinanceLoan[] }) {
           </li>
         ))}
       </ul>
-      <div className="mt-4 h-80">
-        <ResponsiveContainer>
-          <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--line)" vertical={false} />
-            <XAxis
-              dataKey="label"
-              tick={{ fontSize: 10 }}
-              interval={Math.max(0, Math.floor(data.length / 8) - 1)}
-            />
-            <YAxis tick={{ fontSize: 10 }} width={52} tickFormatter={(value) => formatCompact(Number(value))} />
-            <Tooltip
-              formatter={(value, name) => [formatInr(Number(value)), String(name)]}
-              labelFormatter={(_, payload) => payload?.[0]?.payload?.label ?? ''}
-            />
-            {series.map((loan, index) => (
-              <Line
-                key={loan.id}
-                type="monotone"
-                dataKey={loan.id}
-                name={loan.name}
-                stroke={LOAN_LINE_COLORS[index % LOAN_LINE_COLORS.length]}
-                strokeWidth={2}
-                connectNulls
-                dot={false}
-              />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <MonoLine
+        className="mt-4 h-80"
+        data={data as Record<string, string | number>[]}
+        lines={series.map((loan, index) => ({
+          key: loan.id,
+          name: loan.name,
+          color: LOAN_LINE_COLORS[index % LOAN_LINE_COLORS.length],
+        }))}
+        format={(value) => formatCompact(value)}
+      />
     </section>
   )
 }

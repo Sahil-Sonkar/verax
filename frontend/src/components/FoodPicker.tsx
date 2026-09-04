@@ -397,7 +397,7 @@ export function MacroBoard({ food }: { food: { kcal: number; protein: number; ca
     { key: 'protein', label: 'Protein', grams: food.protein, cal: proteinCal, color: MACRO_COLORS.protein, pct: pct(proteinCal) },
   ]
   return (
-    <div className="flex items-center gap-5">
+    <div className="flex flex-col items-center gap-5 min-[480px]:flex-row min-[480px]:items-center">
       <MacroDonut kcal={food.kcal} slices={items} />
       <div className="grid min-w-0 flex-1 grid-cols-3 gap-2 text-center">
         {items.map((item) => (

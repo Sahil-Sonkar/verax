@@ -9,6 +9,7 @@ import { Sectograph } from '../components/Sectograph'
 import { TimeField } from '../components/TimeField'
 import { WeekdayChips } from '../components/WeekdayChips'
 import { ApiError, api } from '../lib/api'
+import { DEFAULT_SWATCH } from '../lib/colors'
 import { formatClock, isoWeekday, parseClock, timesOverlap, toTimeInput, WEEKDAY_LABELS } from '../lib/weekdays'
 import type { GoogleCalendarEvent, GoogleCalendarStatus, RoutineBlock, RoutineDay, RoutineTask, RoutineWeek } from '../types'
 
@@ -26,13 +27,13 @@ export function RoutinePage() {
   const [end, setEnd] = useState('06:20')
   const [days, setDays] = useState<number[]>([weekday])
   const [allWeek, setAllWeek] = useState(false)
-  const [color, setColor] = useState('#0095f6')
+  const [color, setColor] = useState<string>(DEFAULT_SWATCH)
   const [editTitle, setEditTitle] = useState('')
   const [editStart, setEditStart] = useState('06:00')
   const [editEnd, setEditEnd] = useState('06:20')
   const [editDays, setEditDays] = useState<number[]>([])
   const [editAllWeek, setEditAllWeek] = useState(false)
-  const [editColor, setEditColor] = useState('#0095f6')
+  const [editColor, setEditColor] = useState<string>(DEFAULT_SWATCH)
   const [taskName, setTaskName] = useState('')
   const [taskDays, setTaskDays] = useState<number[]>([])
   const [saving, setSaving] = useState(false)
@@ -175,7 +176,7 @@ export function RoutinePage() {
     setEditEnd(toTimeInput(block.endMin))
     setEditDays(block.weekdays)
     setEditAllWeek(block.weekdays.length === 7)
-    setEditColor(block.color || '#0095f6')
+    setEditColor(block.color || DEFAULT_SWATCH)
     setTaskName('')
     setTaskDays([weekday])
   }
@@ -251,7 +252,7 @@ export function RoutinePage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="kicker">Week</p>
-          <h1 className="mt-2 text-5xl tracking-tight">Routine</h1>
+          <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Routine</h1>
           <p className="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-[var(--muted)]">
             One line per block. Day is the clock. Week and month are a calendar of the same repeating week
             {googleCal.data?.connected ? ` · two-way with ${googleCal.data.email ?? 'Google Calendar'}` : ''}.
@@ -328,7 +329,7 @@ export function RoutinePage() {
               {blocks.map((block) => (
                 <li key={block.id}>
                   <button type="button" className="flex w-full items-center justify-between gap-4 py-3 text-left" onClick={() => selectBlock(block)}>
-                    <span className="color-swatch shrink-0" style={{ background: block.color || '#0095f6' }} />
+                    <span className="color-swatch shrink-0" style={{ background: block.color || DEFAULT_SWATCH }} />
                     <span className="tabular text-sm text-[var(--muted)]">{formatClock(block.startMin, hour12)}</span>
                     <span className="flex-1 text-base">{block.title}</span>
                     {block.tasks.length > 0 && <span className="text-xs text-[var(--muted)]">{block.tasks.length}</span>}
@@ -535,7 +536,7 @@ export function RoutinePage() {
                 })
                 setCreate(false)
                 setTitle('')
-                setColor('#0095f6')
+                setColor(DEFAULT_SWATCH)
                 await refresh()
               } catch (err) {
                 setBlockError(err instanceof ApiError ? err.message : overlapMessage('another block'))

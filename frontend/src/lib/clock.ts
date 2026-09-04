@@ -1,15 +1,17 @@
+import { TONE } from './colors'
+
 export const ASPECTS = ['Body', 'Mind', 'Work', 'Voice', 'Money', 'People', 'Place', 'Play'] as const
 export type Aspect = (typeof ASPECTS)[number]
 
 export const ASPECT_COLORS: Record<Aspect, string> = {
-  Body: '#f77737',
-  Mind: '#833ab4',
-  Work: '#0095f6',
-  Voice: '#e1306c',
-  Money: '#405de6',
-  People: '#c13584',
-  Place: '#5b51d8',
-  Play: '#fcaf45',
+  Body: TONE.mint,
+  Mind: TONE.violet,
+  Work: TONE.sky,
+  Voice: TONE.pink,
+  Money: TONE.brass,
+  People: TONE.pink,
+  Place: TONE.violet,
+  Play: TONE.brass,
 }
 
 export type Energy = 'BUILD' | 'CONNECT' | 'EXPLORE' | 'RECOVER' | 'RESET'

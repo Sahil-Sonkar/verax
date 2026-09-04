@@ -67,7 +67,7 @@ export function AppShell() {
 
       <div className="lg:pl-[244px]">
         {!fullBleed && (
-          <header className="nav-compact sticky top-0 z-[20] flex min-h-14 items-center justify-between px-4 lg:hidden">
+          <header className="nav-compact sticky top-0 z-[20] flex min-h-14 items-center justify-between lg:hidden">
             <NavLink to="/" className="wordmark text-[32px] leading-none" translate="no" aria-label="Home" end>
               Verax
             </NavLink>
@@ -78,8 +78,8 @@ export function AppShell() {
           id="main"
           className={
             fullBleed
-              ? 'min-h-dvh p-0'
-              : 'px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-4 lg:px-8 lg:pb-12 lg:pt-8'
+              ? 'min-h-dvh min-w-0 p-0'
+              : 'min-w-0 px-[max(1rem,env(safe-area-inset-left))] pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-4 pr-[max(1rem,env(safe-area-inset-right))] lg:px-8 lg:pb-12 lg:pt-8'
           }
         >
           <InstallHint />
@@ -95,7 +95,7 @@ export function AppShell() {
               to={item.to}
               end={item.to === '/'}
               aria-label={item.label}
-              className="flex h-12 items-center justify-center text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              className="flex h-12 min-h-11 min-w-0 items-center justify-center text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             >
               {({ isActive }) => (
                 <Glyph icon={item.icon} size={24} strokeWidth={isActive ? 2 : 1.5} />
@@ -105,7 +105,7 @@ export function AppShell() {
           <NavLink
             to="/settings"
             aria-label="Profile"
-            className="flex h-12 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            className="flex h-12 min-h-11 min-w-0 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
           >
             {({ isActive }) => (
               <span

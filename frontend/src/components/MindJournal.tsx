@@ -3,14 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Dialog, PrimaryButton } from './Dialog'
 import { AddButton, TrashButton } from './IconButtons'
 import { api } from '../lib/api'
+import { inkOn } from '../lib/colors'
 import type { MindJournal as Board, MindNote, MindTag } from '../types'
-
-const LIGHT = new Set(['#fcaf45', '#f9ce34', '#fccc63', '#c4923a', '#d4ae6a', '#eeebe4'])
-
-function snackInk(color: string) {
-  if (color.startsWith('var(')) return 'var(--bg)'
-  return LIGHT.has(color.toLowerCase()) ? '#1c1c1a' : '#ffffff'
-}
 
 function noteDate(value: string) {
   return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(value))
@@ -34,7 +28,7 @@ function TagSnack({
       className="snack"
       style={{
         background: tag.color,
-        color: snackInk(tag.color),
+        color: inkOn(tag.color),
         opacity: on ? 1 : 0.38,
       }}
     >

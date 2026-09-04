@@ -98,7 +98,7 @@ export function LoginPage() {
             {error}
           </p>
         )}
-        <PrimaryButton type="submit" disabled={busy} className="w-full py-[7px] text-sm">
+        <PrimaryButton type="submit" disabled={busy} className="w-full min-h-11 text-sm">
           {busy ? 'Signing in…' : 'Log in'}
         </PrimaryButton>
       </form>
@@ -110,7 +110,7 @@ export function LoginPage() {
       <div className="mt-4 space-y-3">
         <button
           type="button"
-          className="w-full text-sm font-semibold text-[var(--accent)]"
+          className="flex min-h-11 w-full items-center justify-center text-sm font-semibold text-[var(--accent)]"
           onClick={async () => {
             setError('')
             const clientId = providers.data?.googleClientId
@@ -140,7 +140,7 @@ export function LoginPage() {
         </button>
         <button
           type="button"
-          className="w-full text-sm font-semibold text-[var(--fg)]"
+          className="flex min-h-11 w-full items-center justify-center text-sm font-semibold text-[var(--fg)]"
           onClick={async () => {
             setError('')
             const clientId = providers.data?.appleClientId
@@ -169,7 +169,7 @@ export function LoginPage() {
       </div>
       <p className="mt-8 text-center text-sm text-[var(--muted)]">
         Don't have an account?{' '}
-        <Link to="/register" className="font-semibold text-[var(--accent)]">
+        <Link to="/register" className="inline-flex min-h-11 items-center font-semibold text-[var(--accent)]">
           Sign up
         </Link>
       </p>
@@ -229,13 +229,13 @@ export function RegisterPage() {
             {error}
           </p>
         )}
-        <PrimaryButton type="submit" disabled={busy} className="w-full py-[7px] text-sm">
+        <PrimaryButton type="submit" disabled={busy} className="w-full min-h-11 text-sm">
           {busy ? 'Creating…' : 'Sign up'}
         </PrimaryButton>
       </form>
       <p className="mt-8 text-center text-sm text-[var(--muted)]">
         Have an account?{' '}
-        <Link to="/login" className="font-semibold text-[var(--accent)]">
+        <Link to="/login" className="inline-flex min-h-11 items-center font-semibold text-[var(--accent)]">
           Log in
         </Link>
       </p>
@@ -245,7 +245,7 @@ export function RegisterPage() {
 
 function AuthFrame({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="relative flex min-h-dvh items-center justify-center bg-[var(--bg)] px-4 pt-[max(2.5rem,calc(env(safe-area-inset-top)+1.25rem))] pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.25rem))]">
+    <div className="relative flex min-h-dvh items-start justify-center overflow-y-auto bg-[var(--bg)] px-4 pt-[max(2.5rem,calc(env(safe-area-inset-top)+1.25rem))] pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.25rem))] sm:items-center">
       <div className="grain" aria-hidden="true" />
       <a href="#auth-main" className="skip-link">
         Skip to content
@@ -253,7 +253,7 @@ function AuthFrame({ title, subtitle, children }: { title: string; subtitle: str
       <div id="auth-main" className="relative w-full max-w-[380px]">
         <InstallHint />
       <div className="panel">
-        <div className="card px-6 py-8 sm:px-10 sm:py-12">
+        <div className="card px-5 py-8 sm:px-10 sm:py-12">
           <div className="wordmark mb-8 text-center text-5xl leading-none" translate="no">
             Verax
           </div>

@@ -1,15 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 import { MuscleSplit } from '../components/MuscleSplit'
+import { MonoLine } from '../components/mono/MonoLine'
 import { ChevronDown, ChevronUp, Search } from 'lucide-react'
 import { Dialog, PrimaryButton } from '../components/Dialog'
 import { AddButton, TrashButton } from '../components/IconButtons'
@@ -286,11 +278,11 @@ export function TrainPage() {
             Favourite workouts on the clock. Guided sets, rest timer, and the 1,324-exercise library with demos. End a session for volume and what moved since last time.
           </p>
         </div>
-        <div className="flex gap-2">
-          <button type="button" className="glass-btn px-4 py-2.5 text-sm" onClick={() => setCustomOpen(true)}>
+        <div className="flex w-full flex-wrap gap-2 min-[480px]:w-auto">
+          <button type="button" className="glass-btn flex-1 px-4 py-2.5 text-sm min-[480px]:flex-none" onClick={() => setCustomOpen(true)}>
             New activity
           </button>
-          <PrimaryButton onClick={() => setGarminOpen(true)}>Log Garmin</PrimaryButton>
+          <PrimaryButton className="flex-1 min-[480px]:flex-none" onClick={() => setGarminOpen(true)}>Log Garmin</PrimaryButton>
         </div>
       </div>
 
@@ -431,35 +423,15 @@ export function TrainPage() {
                 <p className="mt-0.5 text-sm text-[var(--muted)]">
                   {activeLabel ? `${activeLabel} · load for this ${grain}` : `Load by ${grain}`}
                 </p>
-                <div className="mt-4 h-80">
-                  <ResponsiveContainer>
-                    <LineChart
-                      data={trends}
-                      onClick={(state) => {
-                        const period = (
-                          state as { activePayload?: { payload?: { period?: string } }[] }
-                        ).activePayload?.[0]?.payload?.period
-                        if (period) setSelectedPeriod(period)
-                      }}
-                    >
-                      <CartesianGrid stroke="var(--line)" vertical={false} />
-                      <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip
-                        formatter={(value) => [`${Math.round(Number(value))} kg`, 'Volume']}
-                        labelFormatter={(_, payload) => payload?.[0]?.payload?.label ?? ''}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="volume"
-                        stroke="#0095f6"
-                        strokeWidth={2}
-                        dot={{ r: trends.length < 16 ? 3 : 0 }}
-                        activeDot={{ r: 5 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                <MonoLine
+                  className="mt-4 h-80"
+                  data={trends}
+                  valueKey="volume"
+                  format={(value) => `${Math.round(value)} kg`}
+                  onPoint={(row) => {
+                    if (typeof row.period === 'string') setSelectedPeriod(row.period)
+                  }}
+                />
               </div>
             </div>
           </section>
@@ -1536,20 +1508,12 @@ function ParameterChart({
           )}
         </div>
       </div>
-      <div className="mt-2 h-36">
-        <ResponsiveContainer>
-          <LineChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid stroke="var(--line)" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-            <YAxis domain={[min - pad, max + pad]} tick={{ fontSize: 10 }} width={36} />
-            <Tooltip
-              formatter={(value) => [`${fmt(Number(value))}${unit ? ` ${unit}` : ''}`, label]}
-              labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ''}
-            />
-            <Line type="monotone" dataKey="value" stroke="#0095f6" strokeWidth={2} dot={{ r: points.length < 8 ? 3 : 0 }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <MonoLine
+        className="mt-2 h-36"
+        data={points}
+        domain={[min - pad, max + pad]}
+        format={(value) => `${fmt(value)}${unit ? ` ${unit}` : ''}`}
+      />
     </article>
   )
 }

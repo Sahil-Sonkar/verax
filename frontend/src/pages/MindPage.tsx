@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { AmbientPlayer } from '../components/AmbientPlayer'
+import { MonoBars } from '../components/mono/MonoBars'
+import { MonoLine } from '../components/mono/MonoLine'
 import { Dialog, PrimaryButton } from '../components/Dialog'
 import { FocusTimer } from '../components/FocusTimer'
 import { MindJournal } from '../components/MindJournal'
@@ -48,7 +49,7 @@ export function MindPage() {
     <div className="space-y-8">
       <div>
         <p className="kicker">Quiet</p>
-        <h1 className="mt-2 text-5xl tracking-tight">Mind</h1>
+        <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Mind</h1>
         <p className="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-[var(--muted)]">
           Notes, a sit, and sleep. Each stays on its own tab.
         </p>
@@ -169,31 +170,18 @@ function SleepPanel() {
         </div>
       )}
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="h-72">
-          <ResponsiveContainer>
-            <BarChart data={chart}>
-              <CartesianGrid stroke="var(--line)" vertical={false} />
-              <XAxis dataKey="period" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="awake" stackId="s" fill="#737373" />
-              <Bar dataKey="rem" stackId="s" fill="#833ab4" />
-              <Bar dataKey="core" stackId="s" fill="#0095f6" />
-              <Bar dataKey="deep" stackId="s" fill="#00376b" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="h-72">
-          <ResponsiveContainer>
-            <LineChart data={chart}>
-              <CartesianGrid stroke="var(--line)" vertical={false} />
-              <XAxis dataKey="period" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
-              <Tooltip />
-              <Line type="monotone" dataKey="score" stroke="#0095f6" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <MonoBars
+          className="h-72"
+          data={chart}
+          categoryKey="period"
+          bars={[
+            { key: 'awake', name: 'Awake', fill: 'var(--muted)' },
+            { key: 'rem', name: 'REM', fill: 'var(--violet)' },
+            { key: 'core', name: 'Core', fill: 'var(--sky)' },
+            { key: 'deep', name: 'Deep', fill: 'var(--mint)' },
+          ]}
+        />
+        <MonoLine className="h-72" data={chart} xKey="period" valueKey="score" domain={[0, 100]} />
       </div>
       {sleep.data && sleep.data.nights.length === 0 && (
         <p className="text-sm text-[var(--muted)]">No nights in this range.</p>

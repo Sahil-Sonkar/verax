@@ -41,7 +41,7 @@ export function SettingsPage() {
     <div className="space-y-10">
       <div>
         <p className="kicker">Account</p>
-        <h1 className="mt-2 text-5xl tracking-tight">{user?.name}</h1>
+        <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">{user?.name}</h1>
         <p className="mt-2 text-[15px] text-[var(--muted)]">{user?.email}</p>
       </div>
 

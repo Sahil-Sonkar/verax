@@ -1,11 +1,6 @@
-import { categoryColor } from '../lib/colors'
+import { Badge } from '@/components/ui/badge'
+import { categoryColor, inkOn } from '../lib/colors'
 import type { NamedScore } from '../types'
-
-const LIGHT = new Set(['#fcaf45', '#f9ce34', '#fccc63'])
-
-function snackInk(color: string) {
-  return LIGHT.has(color.toLowerCase()) ? '#262626' : '#ffffff'
-}
 
 export function CategorySnacks({ categories }: { categories: NamedScore[] }) {
   return (
@@ -13,14 +8,15 @@ export function CategorySnacks({ categories }: { categories: NamedScore[] }) {
       {categories.map((category) => {
         const color = categoryColor(category.name, category.color)
         return (
-          <span
+          <Badge
             key={category.name}
-            className="snack"
-            style={{ background: color, color: snackInk(color) }}
+            variant="secondary"
+            className="gap-1.5 border-transparent"
+            style={{ background: color, color: inkOn(color) }}
           >
             {category.name}
             <span className="tabular opacity-90">{category.percent}%</span>
-          </span>
+          </Badge>
         )
       })}
     </div>

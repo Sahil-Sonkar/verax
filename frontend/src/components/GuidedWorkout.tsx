@@ -218,7 +218,7 @@ export function GuidedWorkout({
                     return (
                       <div
                         key={set.id}
-                        className={`grid items-center gap-2 rounded-lg border border-[var(--line)] px-2 py-2 ${checked ? 'bg-[var(--surface-2)]' : ''} ${set.track === 'TIME' ? 'grid-cols-[2rem_1fr_auto]' : 'grid-cols-[2rem_1fr_1fr_auto]'}`}
+                        className={`grid min-w-0 items-center gap-2 rounded-lg border border-[var(--line)] px-2 py-2 ${checked ? 'bg-[var(--surface-2)]' : ''} ${set.track === 'TIME' ? 'grid-cols-[2rem_minmax(0,1fr)_auto]' : 'grid-cols-[2rem_minmax(0,1fr)_minmax(0,1fr)_auto]'}`}
                       >
                         <span className="text-center text-xs text-[var(--muted)]">{set.setIndex}</span>
                         {set.track === 'TIME' ? (
@@ -244,7 +244,7 @@ export function GuidedWorkout({
                         )}
                         <button
                           type="button"
-                          className={`grid size-9 place-items-center rounded-full border ${checked ? 'border-[var(--mint)] bg-[var(--mint)] text-[var(--bg)]' : 'border-[var(--line)]'}`}
+                          className={`grid size-11 place-items-center rounded-full border ${checked ? 'border-[var(--mint)] bg-[var(--mint)] text-[var(--bg)]' : 'border-[var(--line)]'}`}
                           aria-pressed={checked}
                           aria-label={checked ? 'Set logged' : 'Log set'}
                           onClick={() => void checkSet(set)}

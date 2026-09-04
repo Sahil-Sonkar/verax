@@ -48,7 +48,7 @@ export function VoicePage() {
     <div className="space-y-8">
       <div>
         <p className="kicker">Public</p>
-        <h1 className="mt-2 text-5xl tracking-tight">Voice</h1>
+        <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Voice</h1>
         <p className="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-[var(--muted)]">
           Life is the raw material. Stats from YouTube, Instagram, and LinkedIn. Ideas move through a track until they have a hook.
         </p>
@@ -249,7 +249,7 @@ function ContentBoard() {
 
   return (
     <div>
-      <div className="flex items-end justify-between gap-3">
+      <div className="mt-3 flex flex-col gap-4 min-[720px]:flex-row min-[720px]:items-end min-[720px]:justify-between">
         <div className="flex gap-1 overflow-x-auto" role="tablist" aria-label="Platform track">
           {TRACKS.map((item) => (
             <button
@@ -271,11 +271,11 @@ function ContentBoard() {
       {ideas.isLoading ? (
         <div className="mt-6 skeleton h-48" />
       ) : (
-        <div className="mt-6 flex gap-4 overflow-x-auto pb-4">
+        <div className="mt-6 grid gap-8 min-[720px]:flex min-[720px]:gap-4 min-[720px]:overflow-x-auto min-[720px]:pb-4">
           {PHASES.map((phase) => {
             const rows = grouped.get(phase.id) ?? []
             return (
-              <section key={phase.id} className="w-[220px] shrink-0">
+              <section key={phase.id} className="min-w-0 min-[720px]:w-[220px] min-[720px]:shrink-0">
                 <h3 className="text-xs tracking-wide text-[var(--muted)]">{phase.label}</h3>
                 <div className="mt-3 space-y-3">
                   {rows.length === 0 && <p className="text-xs text-[var(--muted)]">Empty</p>}

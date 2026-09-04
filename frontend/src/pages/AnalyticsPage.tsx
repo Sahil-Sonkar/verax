@@ -1,18 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { MonoBars } from '../components/mono/MonoBars'
+import { MonoLine } from '../components/mono/MonoLine'
 import { api } from '../lib/api'
 import { pct, signedPct } from '../lib/format'
 import { categoryColor, scoreTone } from '../lib/colors'
@@ -76,49 +66,26 @@ export function AnalyticsPage() {
             ))}
           </div>
         </div>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={lineData}>
-              <CartesianGrid stroke="var(--line)" vertical={false} />
-              <XAxis dataKey="label" tick={{ fill: 'var(--muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fill: 'var(--muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip
-                contentStyle={{
-                  background: 'color-mix(in srgb, var(--surface) 78%, transparent)',
-                  border: '0.5px solid color-mix(in srgb, var(--fg) 22%, transparent)',
-                  borderRadius: 16,
-                  backdropFilter: 'blur(24px) saturate(1.6)',
-                }}
-                formatter={(value) => [`${value}%`, 'Consistency']}
-              />
-              <Line type="monotone" dataKey="percent" stroke="var(--accent)" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <MonoLine
+          className="h-72"
+          data={lineData}
+          valueKey="percent"
+          domain={[0, 100]}
+          format={(value) => `${Math.round(value)}%`}
+        />
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
         <ChartCard title="Category Performance">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={categories.data ?? []} layout="vertical" margin={{ left: 24 }}>
-              <CartesianGrid stroke="var(--line)" horizontal={false} />
-              <XAxis type="number" domain={[0, 100]} hide />
-              <YAxis type="category" dataKey="name" width={90} tick={{ fill: 'var(--muted)', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip
-                contentStyle={{
-                  background: 'color-mix(in srgb, var(--surface) 78%, transparent)',
-                  border: '0.5px solid color-mix(in srgb, var(--fg) 22%, transparent)',
-                  borderRadius: 16,
-                  backdropFilter: 'blur(24px) saturate(1.6)',
-                }}
-              />
-              <Bar dataKey="percent" radius={[0, 4, 4, 0]}>
-                {(categories.data ?? []).map((row) => (
-                  <Cell key={row.name} fill={categoryColor(row.name, row.color)} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <MonoBars
+            className="h-[280px]"
+            layout="vertical"
+            categoryKey="name"
+            data={categories.data ?? []}
+            bars={[{ key: 'percent', name: 'Score' }]}
+            colorOf={(row) => categoryColor(String(row.name), String(row.color ?? ''))}
+            format={(value) => `${Math.round(value)}%`}
+          />
         </ChartCard>
         <ChartCard title="Habit Performance">
           <div className="space-y-3">
