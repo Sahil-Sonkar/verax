@@ -1,7 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { dehydrate, hydrate, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { AuthProvider, useAuth } from './lib/auth'
+import { QUERY_CACHE } from './lib/api'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { LoginPage, RegisterPage } from './pages/AuthPages'
 import { DashboardPage } from './pages/DashboardPage'
@@ -22,7 +23,24 @@ import { VoicePage } from './pages/VoicePage'
 import type { ReactNode } from 'react'
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: { retry: 1, staleTime: 60_000, gcTime: 30 * 60_000, refetchOnWindowFocus: false },
+  },
+})
+
+try {
+  const raw = sessionStorage.getItem(QUERY_CACHE)
+  if (raw) hydrate(queryClient, JSON.parse(raw))
+} catch {
+  sessionStorage.removeItem(QUERY_CACHE)
+}
+
+window.addEventListener('pagehide', () => {
+  try {
+    sessionStorage.setItem(QUERY_CACHE, JSON.stringify(dehydrate(queryClient)))
+  } catch {
+    sessionStorage.removeItem(QUERY_CACHE)
+  }
 })
 
 function Guard({ children }: { children: ReactNode }) {

@@ -1,4 +1,5 @@
 const TOKEN_KEY = 'verax.token'
+export const QUERY_CACHE = 'verax.qc'
 
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
@@ -6,7 +7,10 @@ export function getToken() {
 
 export function setToken(token: string | null) {
   if (token) localStorage.setItem(TOKEN_KEY, token)
-  else localStorage.removeItem(TOKEN_KEY)
+  else {
+    localStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem(QUERY_CACHE)
+  }
 }
 
 export class ApiError extends Error {
