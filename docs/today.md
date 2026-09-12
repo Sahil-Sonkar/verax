@@ -109,7 +109,7 @@ Shared blocks unless a row says otherwise.
 | 14:00–19:00 | Career | One check: Career block (70/20/10) | same | same | **same** | same |
 | 19:00–20:00 | Dinner | Cook + dinner base. Open recipe | same | same | same | same |
 | 20:00–21:00 | Life | Walk 7500 | Walk 7500 | **People / Play** | Walk / easy | **People / Play** |
-| 21:00–21:30 | Shutdown | Nested list in [README § 2.3](../README.md#23-night-shutdown-21002130) | same | same | same | same |
+| 21:00–21:30 | Shutdown | Nested list in [life.md § 2.3](life.md#23-night-shutdown-21002130) | same | same | same | same |
 | 21:30 | Sleep | Log sleep start. After this, leftover ticks are not demanded | same | same | same | same |
 
 Hair wash row only on Wed (Shreekesha) and Sat (Detoxie).

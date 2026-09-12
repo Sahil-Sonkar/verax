@@ -1,6 +1,6 @@
 # Verax Architecture
 
-The parked life inventory (8 aspects, full routine, weekly energy) is in [README.md](../README.md). The app in the sidebar is five rooms: Routine, Fuel, Train, Finance, Mind. This file is scoring, API, and stack.
+The parked life inventory (8 aspects, full routine, weekly energy) is in [life.md](life.md). The app sidebar is Home, Routine, Body, Play, Money, Mind, Voice, Profile. This file is scoring, API, and stack.
 
 **Verax** is a personal operating system that answers:
 
@@ -28,7 +28,7 @@ verax/
 ├── frontend/                React 19, Vite, TypeScript, Tailwind
 ├── docker-compose.yml       Postgres, Redis, API, web
 ├── .github/workflows/ci.yml
-└── docs/
+└── docs/                    life, today, architecture, product
 ```
 
 ## Consistency model
