@@ -29,9 +29,14 @@ spring:
     username: ${DATABASE_USER:${USER:}}
     password: ${DATABASE_PASSWORD:}
     hikari:
-      # Fly's Postgres proxy drops idle connections well inside Hikari's 30-minute
-      # default, so the pool handed out dead sockets and /actuator/health spent
-      # 20s revalidating them past the 5s check timeout. Recycle and ping under that window.
+      # ponytail: tuned small because the Fly Postgres machine is shared-cpu-1x:256MB and
+      # runs at ~60% full memory pressure. Its haproxy check then times out every ~40s and
+      # drops every backend at once, killing the whole pool. Fewer, shorter-lived connections
+      # ease the memory pressure and recover faster; the real ceiling is DB RAM, so the
+      # upgrade path is `fly machine update --vm-memory 1024 -a verax-sonkar-db`.
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 60000
       max-lifetime: 240000
       keepalive-time: 60000
       validation-timeout: 3000
