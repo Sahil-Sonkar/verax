@@ -25,12 +25,12 @@ function cssVar(el: Element | null, name: string, fallback: string) {
 }
 
 function nodeFill(node: ExtraNode, outIndex: number, el: Element | null) {
-  if (node.side === 'IN') return cssVar(el, '--mint', '#3d8b5c')
-  if (node.side === 'MID') return cssVar(el, '--fg', '#1c1c1a')
-  if (/loan/i.test(node.name)) return cssVar(el, '--danger', '#c94b52')
-  if (/left|cash/i.test(node.name)) return cssVar(el, '--mint', '#3d8b5c')
+  if (node.side === 'IN') return cssVar(el, '--mint', '#2f6f63')
+  if (node.side === 'MID') return cssVar(el, '--fg', '#1c140e')
+  if (/loan/i.test(node.name)) return cssVar(el, '--danger', '#c04a34')
+  if (/left|cash/i.test(node.name)) return cssVar(el, '--mint', '#2f6f63')
   const token = OUT_PALETTE[outIndex % OUT_PALETTE.length]
-  return cssVar(el, token, '#3d7ec9')
+  return cssVar(el, token, '#3b6382')
 }
 
 function nodeIdOf(end: Link['source'] | Link['target']) {

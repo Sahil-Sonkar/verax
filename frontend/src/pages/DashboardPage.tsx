@@ -6,6 +6,8 @@ import { scoreTone } from '../lib/colors'
 import { ConsistencyHeatmap } from '../components/Heatmap'
 import { CategoryBloom } from '../components/CategoryBloom'
 import { CategorySnacks } from '../components/CategorySnacks'
+import { PageHeader } from '../components/PageHeader'
+import { ChartCard } from '../components/mono/ChartCard'
 import type { Dashboard, DayDetail, HabitItem, InsightPreview, Quote, WeeklyReview } from '../types'
 
 export function DashboardPage() {
@@ -43,7 +45,7 @@ export function DashboardPage() {
     : null
 
   return (
-    <div className="space-y-8">
+    <div className="page">
       {quote.data && (
         <section className="border-b border-[var(--line)] px-0 py-4">
           <div className="text-sm font-semibold">Quote</div>
@@ -52,12 +54,9 @@ export function DashboardPage() {
         </section>
       )}
 
-      <section className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+      <section className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
         <div>
-          <h1 className="text-[28px] font-semibold">Consistency</h1>
-          <p className="mt-3 max-w-[65ch] text-sm leading-relaxed text-[var(--muted)]">
-            Last 30 days. One quiet day does not erase the stretch.
-          </p>
+          <PageHeader title="Consistency" lead="Last 30 days. One quiet day does not erase the stretch." />
           <div className="mt-8 flex flex-wrap items-end gap-6">
             <div className="text-7xl leading-none tracking-tight tabular md:text-8xl" style={{ color: hero }}>
               {data.overallPercent}%
@@ -95,6 +94,7 @@ export function DashboardPage() {
             Log today
           </Link>
         </div>
+        <ChartCard>
         <ConsistencyHeatmap
           cells={data.heatmap}
           selected={selected ?? undefined}
@@ -127,6 +127,7 @@ export function DashboardPage() {
             </div>
           </div>
         )}
+        </ChartCard>
       </section>
 
       {insights.data && (

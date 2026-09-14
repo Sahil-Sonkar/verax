@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { importanceLabel } from '../lib/format'
 import { categoryColor } from '../lib/colors'
 import { Dialog, PrimaryButton } from '../components/Dialog'
+import { PageHeader } from '../components/PageHeader'
 import type { Category, FrequencyType, Habit, HabitSection, Importance, Metric } from '../types'
 
 const IMPORTANCE_COLOR: Record<Importance, string> = {
@@ -26,21 +27,21 @@ export function HabitsPage() {
   })
 
   return (
-    <div>
-      <div className="flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-4xl tracking-tight">Habits</h1>
-        </div>
-        <PrimaryButton
-          onClick={() => {
-            setEditing(null)
-            setOpen(true)
-          }}
-        >
-          New Habit
-        </PrimaryButton>
-      </div>
-      <div className="mt-8 divide-y divide-[var(--line)] border-y border-[var(--line)]">
+    <div className="page">
+      <PageHeader
+        title="Habits"
+        actions={
+          <PrimaryButton
+            onClick={() => {
+              setEditing(null)
+              setOpen(true)
+            }}
+          >
+            New Habit
+          </PrimaryButton>
+        }
+      />
+      <div className="card divide-y divide-[var(--line)] overflow-hidden px-4">
         {habits.data?.length === 0 && (
           <p className="py-8 text-sm text-[var(--muted)]">No habits yet. Create the first commitment.</p>
         )}

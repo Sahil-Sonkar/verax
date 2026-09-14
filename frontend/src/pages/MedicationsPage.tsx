@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { Dialog, PrimaryButton } from '../components/Dialog'
 import { AddButton, TrashButton } from '../components/IconButtons'
+import { PageHeader } from '../components/PageHeader'
 import { api } from '../lib/api'
 import type { Medication } from '../types'
 
@@ -29,24 +30,22 @@ export function MedicationsPage() {
   })
 
   return (
-    <div>
-      <div className="flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-4xl tracking-tight">Medicines</h1>
-          <p className="mt-2 max-w-lg text-sm text-[var(--muted)]">
-            List what you take. Today shows the doses. History is never hard-deleted.
-          </p>
-        </div>
-        <PrimaryButton
-          onClick={() => {
-            setEditing(null)
-            setOpen(true)
-          }}
-        >
-          New Medicine
-        </PrimaryButton>
-      </div>
-      <div className="mt-8 divide-y divide-[var(--line)] border-y border-[var(--line)]">
+    <div className="page">
+      <PageHeader
+        title="Medicines"
+        lead="List what you take. Today shows the doses. History is never hard-deleted."
+        actions={
+          <PrimaryButton
+            onClick={() => {
+              setEditing(null)
+              setOpen(true)
+            }}
+          >
+            New Medicine
+          </PrimaryButton>
+        }
+      />
+      <div className="card divide-y divide-[var(--line)] overflow-hidden px-4">
         {meds.data?.length === 0 && (
           <p className="py-8 text-sm text-[var(--muted)]">No medicines yet. Add the first course.</p>
         )}

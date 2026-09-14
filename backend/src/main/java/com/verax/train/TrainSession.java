@@ -56,7 +56,7 @@ public class TrainSession {
     private Asset photoAsset;
 
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("exerciseName, setIndex, id")
+    @OrderBy("sortOrder, setIndex, id")
     private List<TrainSet> sets = new ArrayList<>();
 
     public UUID getId() {

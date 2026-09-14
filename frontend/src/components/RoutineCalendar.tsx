@@ -204,7 +204,7 @@ function WeekGrid({
                 <div className="text-[11px] font-semibold text-[var(--muted)]">{format(date, 'EEE')}</div>
                 <div
                   className={`mt-0.5 inline-grid size-7 place-items-center rounded-full text-sm font-semibold ${
-                    isToday ? 'bg-[var(--accent)] text-white' : ''
+                    isToday ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : ''
                   }`}
                 >
                   {format(date, 'd')}
@@ -414,7 +414,7 @@ function MonthGrid({
                 >
                   <span
                     className={`grid size-7 place-items-center rounded-full text-xs font-semibold ${
-                      isToday ? 'bg-[var(--accent)] text-white' : inMonth ? '' : 'text-[var(--muted)]'
+                      isToday ? 'bg-[var(--accent)] text-[var(--accent-fg)]' : inMonth ? '' : 'text-[var(--muted)]'
                     }`}
                   >
                     {format(date, 'd')}

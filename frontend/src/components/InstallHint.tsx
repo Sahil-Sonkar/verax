@@ -21,7 +21,7 @@ export function InstallHint() {
   if (!show) return null
 
   return (
-    <div className="mx-auto mb-4 flex max-w-[380px] items-start gap-3 rounded-[14px] bg-[var(--surface)] px-3 py-3 text-sm shadow-[var(--shadow-border)]">
+    <div className="glass mx-auto mb-4 flex max-w-[380px] items-start gap-3 rounded-[14px] px-3 py-3 text-sm">
       <p className="min-w-0 flex-1 text-[var(--muted)]">
         On iPhone: tap Share, then <span className="font-medium text-[var(--fg)]">Add to Home Screen</span>. Verax opens like an app and picks up site updates when you launch it.
       </p>

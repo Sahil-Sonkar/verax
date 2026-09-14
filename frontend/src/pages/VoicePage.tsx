@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Dialog, PrimaryButton } from '../components/Dialog'
 import { AddButton, TrashButton } from '../components/IconButtons'
 import { MonoLine } from '../components/mono/MonoLine'
+import { PageHeader, PageTabs } from '../components/PageHeader'
 import { api } from '../lib/api'
 import type { ContentIdea, ContentPhase, ContentPlatform, PlatformStats } from '../types'
 
@@ -45,30 +46,13 @@ function formatNum(value?: number) {
 export function VoicePage() {
   const [tab, setTab] = useState<Tab>('social')
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="kicker">Public</p>
-        <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Voice</h1>
-        <p className="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-[var(--muted)]">
-          Life is the raw material. Stats from YouTube, Instagram, and LinkedIn. Ideas move through a track until they have a hook.
-        </p>
-      </div>
-      <div className="flex gap-1 overflow-x-auto border-b border-[var(--line)]" role="tablist" aria-label="Voice">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.id}
-            className={`shrink-0 px-3.5 py-3 text-[13px] font-medium tracking-wide ${
-              tab === item.id ? 'text-[var(--fg)] shadow-[inset_0_-2px_0_var(--fg)]' : 'text-[var(--muted)]'
-            }`}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+    <div className="page">
+      <PageHeader
+        kicker="Public"
+        title="Voice"
+        lead="Life is the raw material. Stats from YouTube, Instagram, and LinkedIn. Ideas move through a track until they have a hook."
+      />
+      <PageTabs label="Voice" value={tab} items={TABS} onChange={setTab} />
       {tab === 'social' ? <SocialStats /> : <ContentBoard />}
     </div>
   )
@@ -96,7 +80,7 @@ function SocialStats() {
           value: row.value,
         }))
         return (
-          <section key={platform.platform}>
+          <section key={platform.platform} className="card p-4 lg:p-5">
             <div className="flex items-end justify-between gap-3">
               <h2 className="text-2xl tracking-tight">{platform.label}</h2>
               <button

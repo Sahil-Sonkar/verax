@@ -7,7 +7,7 @@ export function applyTheme(mode: 'light' | 'dark') {
   root.classList.toggle('dark', mode === 'dark')
   localStorage.setItem('verax.theme', mode)
   const meta = document.querySelector('meta[name="theme-color"]:not([media])')
-  if (meta) meta.setAttribute('content', mode === 'light' ? '#f6f5f2' : '#0c0c0b')
+  if (meta) meta.setAttribute('content', mode === 'light' ? '#efe4d6' : '#120e0c')
   void root.offsetHeight
   freeze.remove()
 }

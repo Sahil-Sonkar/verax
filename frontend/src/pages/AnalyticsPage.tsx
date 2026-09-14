@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { useMemo, type ReactNode } from 'react'
+import { useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { MonoBars } from '../components/mono/MonoBars'
 import { MonoLine } from '../components/mono/MonoLine'
 import { api } from '../lib/api'
 import { pct, signedPct } from '../lib/format'
 import { categoryColor, scoreTone } from '../lib/colors'
+import { PageHeader } from '../components/PageHeader'
+import { ChartCard } from '../components/mono/ChartCard'
 import type { Compare, NamedScore, TrendPoint, WeeklyReview } from '../types'
 
 export function AnalyticsPage() {
@@ -44,10 +46,8 @@ export function AnalyticsPage() {
   )
 
   return (
-    <div className="space-y-10">
-      <div>
-        <h1 className="text-4xl tracking-tight">Analytics</h1>
-      </div>
+    <div className="page">
+      <PageHeader title="Analytics" />
 
       <section>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -66,6 +66,7 @@ export function AnalyticsPage() {
             ))}
           </div>
         </div>
+        <ChartCard>
         <MonoLine
           className="h-72"
           data={lineData}
@@ -73,6 +74,7 @@ export function AnalyticsPage() {
           domain={[0, 100]}
           format={(value) => `${Math.round(value)}%`}
         />
+        </ChartCard>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-2">
@@ -170,18 +172,9 @@ export function AnalyticsPage() {
   )
 }
 
-function ChartCard({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div>
-      <h2 className="mb-4 text-2xl tracking-tight">{title}</h2>
-      {children}
-    </div>
-  )
-}
-
 function CompareStat({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
   return (
-    <div>
+    <div className="card p-4">
       <div className="text-sm text-[var(--muted)]">{label}</div>
       <div className="text-3xl tracking-tight tabular" style={{ color: alert ? 'var(--danger)' : 'var(--fg)' }}>
         {value}

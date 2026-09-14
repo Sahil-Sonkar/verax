@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useId, useState } from 'react'
 import { api } from '../lib/api'
 import { PrimaryButton } from '../components/Dialog'
+import { PageHeader } from '../components/PageHeader'
 import type { JournalEntry } from '../types'
 
 function isoDate(date: Date) {
@@ -58,10 +59,10 @@ export function JournalPage() {
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
       <div>
-        <h1 className="text-4xl tracking-tight">Journal</h1>
-        <p className="mt-2 max-w-xl text-sm text-[var(--muted)]">
-          How were you thinking during this period of your life? This is for the future video, and for you.
-        </p>
+        <PageHeader
+          title="Journal"
+          lead="How were you thinking during this period of your life? This is for the future video, and for you."
+        />
         <label className="mt-6 block max-w-xs" htmlFor="journal-date">
           <span className="mb-1 block text-xs text-[var(--muted)]">Date</span>
           <input

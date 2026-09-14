@@ -2,7 +2,7 @@ import { Check } from 'lucide'
 import { Link } from 'react-router-dom'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Glyph } from './Glyph'
-import { habitColor } from '../lib/colors'
+import { habitColor, inkOn } from '../lib/colors'
 import { habitIcon } from '../lib/habitIcons'
 import { isWaterHabit } from '../lib/dailyHabits'
 import type { CompletionStatus, HabitItem } from '../types'
@@ -54,11 +54,11 @@ export function TrackerHabitRow({
           className="grid size-11 shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
         >
           <span
-            className="grid size-7 place-items-center rounded-full text-white"
+            className="grid size-7 place-items-center rounded-full"
             style={{
               background: done ? accent : half ? `color-mix(in srgb, ${accent} 55%, var(--surface))` : 'transparent',
               boxShadow: done || half ? undefined : `inset 0 0 0 2px ${accent}`,
-              color: done || half ? '#fff' : accent,
+              color: done || half ? inkOn(accent) : accent,
             }}
           >
             {done ? <Glyph icon={Check} size={16} strokeWidth={2.5} /> : <Glyph icon={Icon} size={15} />}

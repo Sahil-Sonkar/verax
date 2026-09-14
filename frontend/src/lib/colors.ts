@@ -1,16 +1,23 @@
 /** Hexes match :root tokens so pickers, SVG, and CSS stay on one palette. */
 export const TONE = {
-  sky: '#3d7ec9',
-  mint: '#3d8b5c',
-  sage: '#4a8f5c',
-  brass: '#c4923a',
-  pink: '#c45b72',
-  violet: '#7a5ea8',
-  warn: '#b8860b',
-  danger: '#c94b52',
+  sky: '#3b6382',
+  mint: '#2f6f63',
+  sage: '#557c53',
+  brass: '#c08b3e',
+  pink: '#a85068',
+  violet: '#6b5480',
+  warn: '#c07a18',
+  danger: '#c04a34',
 } as const
 
 export const DEFAULT_SWATCH = TONE.sky
+
+/** One macro mapping for the diary meters, food picker donut, and recipe charts. */
+export const MACRO_COLORS = {
+  carbs: 'var(--brass)',
+  fat: 'var(--sky)',
+  protein: 'var(--danger)',
+} as const
 
 export const CATEGORY_COLORS: Record<string, string> = {
   Body: TONE.mint,
@@ -49,11 +56,11 @@ export const BLOCK_COLORS = [
   TONE.danger,
 ]
 
-const LIGHT = new Set<string>([TONE.brass, TONE.warn, '#d4ae6a', '#eeebe4'])
+const LIGHT = new Set<string>([TONE.brass, TONE.warn, '#e0a36b', '#7fbfa8'])
 
 export function inkOn(color: string) {
   if (color.startsWith('var(')) return 'var(--bg)'
-  return LIGHT.has(color.toLowerCase()) ? '#1c1c1a' : '#ffffff'
+  return LIGHT.has(color.toLowerCase()) ? '#1c140e' : '#ffffff'
 }
 
 export function habitColor(id: string) {

@@ -3,6 +3,7 @@ import { TrackerHabitRow } from '../components/TrackerHabitRow'
 import { api } from '../lib/api'
 import { flattenDay, isWaterHabit, pickTracked } from '../lib/dailyHabits'
 import { scoreTone } from '../lib/colors'
+import { PageHeader } from '../components/PageHeader'
 import type { CompletionStatus, DayMeals, DaySnapshot } from '../types'
 
 export function TodayPage() {
@@ -38,11 +39,11 @@ export function TodayPage() {
   const waterLiters = (meals.data?.waterMl ?? 0) / 1000
 
   return (
-    <div>
-      <h1 className="text-4xl tracking-tight">
-        {new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(date)}
-      </h1>
-      <div className="mt-6 border-y border-[var(--line)]">
+    <div className="page">
+      <PageHeader
+        title={new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' }).format(date)}
+      />
+      <div className="card overflow-hidden divide-y divide-[var(--line)]">
         {tracked.length === 0 && (
           <p className="py-8 text-sm text-[var(--muted)]">No tracked habits yet. Add them on Home.</p>
         )}

@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { pct } from '../lib/format'
 import { categoryColor, scoreTone } from '../lib/colors'
 import { ProgressBar } from '../components/Progress'
+import { PageHeader } from '../components/PageHeader'
 import type { Transformation } from '../types'
 
 export function TransformationPage() {
@@ -15,11 +16,8 @@ export function TransformationPage() {
   if (list.isLoading) return <div className="skeleton h-40 w-full" aria-busy="true" aria-label="Loading transformation" />
   if (!active) {
     return (
-      <div>
-        <h1 className="text-4xl tracking-tight">Transformation</h1>
-        <p className="mt-3 max-w-[65ch] text-[var(--muted)]">
-          No mission yet. Create one when you are ready to bound the stretch.
-        </p>
+      <div className="page">
+        <PageHeader title="Transformation" lead="No mission yet. Create one when you are ready to bound the stretch." />
       </div>
     )
   }
@@ -28,15 +26,21 @@ export function TransformationPage() {
   const consistencyPct = Math.round((active.consistency ?? 0) * 100)
 
   return (
-    <div className="space-y-12">
+    <div className="page">
       <section>
-        <h1 className="text-4xl tracking-tight md:text-5xl">8-month transformation</h1>
-        <p className="mt-3 max-w-[65ch] text-[var(--muted)]">{active.notes}</p>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          {new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(`${active.startDate}T00:00:00`))}
-          {' to '}
-          {new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(`${active.endDate}T00:00:00`))}
-        </p>
+        <PageHeader
+          title="8-month transformation"
+          lead={
+            <>
+              {active.notes}
+              <span className="mt-2 block text-sm">
+                {new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(`${active.startDate}T00:00:00`))}
+                {' to '}
+                {new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(new Date(`${active.endDate}T00:00:00`))}
+              </span>
+            </>
+          }
+        />
       </section>
 
       <section className="grid gap-8 border-t border-[var(--line)] pt-8 md:grid-cols-3">

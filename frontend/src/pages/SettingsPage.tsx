@@ -6,6 +6,7 @@ import { applyTheme } from '../lib/theme'
 import { formatNumber } from '../lib/format'
 import { useAuth } from '../lib/auth'
 import { PrimaryButton } from '../components/Dialog'
+import { PageHeader } from '../components/PageHeader'
 import type { GoogleCalendarStatus, Habit, IntegrationCatalog, Metric, NotificationPrefs, Photo } from '../types'
 
 export function SettingsPage() {
@@ -38,12 +39,8 @@ export function SettingsPage() {
   })
 
   return (
-    <div className="space-y-10">
-      <div>
-        <p className="kicker">Account</p>
-        <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">{user?.name}</h1>
-        <p className="mt-2 text-[15px] text-[var(--muted)]">{user?.email}</p>
-      </div>
+    <div className="page">
+      <PageHeader kicker="Account" title={user?.name} lead={user?.email} />
 
       <section className="border-t border-[var(--line)] pt-6">
         <h2 className="text-2xl tracking-tight">Appearance</h2>

@@ -11,7 +11,7 @@ export function RestTimer() {
   if (!timer) return null
   const pct = timer.total > 0 ? (timer.left / timer.total) * 100 : 0
   return (
-    <div className="mt-3 min-w-[12rem]">
+    <div className="mt-3 min-w-0 w-full max-w-xs">
       <div className="text-xs text-[var(--muted)]">Rest</div>
       <div className="flex items-center gap-3">
         <div className="tabular text-2xl tracking-tight">{clock(timer.left)}</div>

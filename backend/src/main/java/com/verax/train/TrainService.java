@@ -159,6 +159,7 @@ public class TrainService {
                     set.setMuscle(exercise.getMuscle());
                     set.setTrack(exercise.getTrack());
                     set.setSetIndex(i + 1);
+                    set.setSortOrder(exercise.getSortOrder());
                     set.setReps(firstNonNull(lastSet != null ? lastSet.getReps() : null, plannedSet.getReps()));
                     set.setKg(firstNonNull(lastSet != null ? lastSet.getKg() : null, plannedSet.getKg()));
                     set.setSeconds(firstNonNull(lastSet != null ? lastSet.getSeconds() : null, plannedSet.getSeconds()));
@@ -206,6 +207,13 @@ public class TrainService {
         TrainSet set = new TrainSet();
         set.setSession(session);
         apply(set, request);
+        String name = request.exerciseName().trim();
+        int order = session.getSets().stream()
+                .filter(row -> row.getExerciseName().equalsIgnoreCase(name))
+                .mapToInt(TrainSet::getSortOrder)
+                .findFirst()
+                .orElseGet(() -> session.getSets().stream().mapToInt(TrainSet::getSortOrder).max().orElse(-1) + 1);
+        set.setSortOrder(order);
         if (request.setIndex() == null) {
             int next = session.getSets().stream()
                     .filter(row -> row.getExerciseName().equalsIgnoreCase(request.exerciseName().trim()))

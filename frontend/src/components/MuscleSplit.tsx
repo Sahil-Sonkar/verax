@@ -1,14 +1,36 @@
 import { useMemo, useState } from 'react'
 import { formatCompact } from '../lib/format'
+import back from '../assets/muscles/back.webp'
+import biceps from '../assets/muscles/biceps.webp'
+import calves from '../assets/muscles/calves.webp'
+import chest from '../assets/muscles/chest.webp'
+import core from '../assets/muscles/core.webp'
+import glutes from '../assets/muscles/glutes.webp'
+import hams from '../assets/muscles/hams.webp'
+import quads from '../assets/muscles/quads.webp'
+import shoulders from '../assets/muscles/shoulders.webp'
+import triceps from '../assets/muscles/triceps.webp'
 
 const AXES = ['CHEST', 'SHOULDERS', 'BICEPS', 'BACK', 'TRICEPS', 'CORE', 'QUADS', 'HAMS', 'CALVES', 'GLUTES'] as const
-const HIGHLIGHT = '#e23d3d'
-const STROKE = '#3d9bff'
-const FILL = 'rgba(61, 155, 255, 0.28)'
+const STROKE = 'var(--accent)'
+const FILL = 'color-mix(in srgb, var(--accent) 28%, transparent)'
 const RINGS = 4
 
 type Axis = (typeof AXES)[number]
 type Point = { muscle: string; volume: number; sessions?: number }
+
+const MUSCLE_IMG: Record<Axis, string> = {
+  CHEST: chest,
+  SHOULDERS: shoulders,
+  BICEPS: biceps,
+  BACK: back,
+  TRICEPS: triceps,
+  CORE: core,
+  QUADS: quads,
+  HAMS: hams,
+  CALVES: calves,
+  GLUTES: glutes,
+}
 
 function angleAt(index: number) {
   return -Math.PI / 2 + (index * 2 * Math.PI) / AXES.length
@@ -64,11 +86,12 @@ export function MuscleSplit({
   }, [points])
   const max = niceMax(Math.max(...values, 0))
   const ticks = Array.from({ length: RINGS }, (_, index) => ((index + 1) * max) / RINGS)
-  const size = 400
+  const size = compact ? 400 : 520
   const cx = size / 2
   const cy = size / 2
-  const icon = 40
-  const radius = 118
+  const radius = compact ? 96 : 118
+  const icon = compact ? 52 : 68
+  const orbit = radius + (compact ? 44 : 58)
   const data = AXES.map((_, index) => {
     const r = max === 0 ? 0 : (values[index] / max) * radius
     const point = polar(cx, cy, r, index)
@@ -85,7 +108,7 @@ export function MuscleSplit({
           <p className="mt-0.5 text-sm text-[var(--muted)]">{subtitle}</p>
         </>
       )}
-      <div className="relative mx-auto mt-2 w-full max-w-[380px]">
+      <div className="relative mx-auto mt-2 w-full max-w-[20rem] lg:max-w-[440px]">
         <svg viewBox={`0 0 ${size} ${size}`} className="h-auto w-full overflow-visible" role="img" aria-label={title}>
           {ticks.map((tick) => (
             <polygon
@@ -129,106 +152,58 @@ export function MuscleSplit({
           })}
           <polygon points={data} fill={FILL} stroke={STROKE} strokeWidth="2" strokeLinejoin="round" />
           {AXES.map((muscle, index) => {
-            const spot = polar(cx, cy, radius + 34, index)
+            const spot = polar(cx, cy, orbit, index)
             const active = hover === index
+            const imgH = icon * 1.7
             return (
               <g
                 key={muscle}
-                transform={`translate(${spot.x - icon / 2} ${spot.y - 28})`}
                 className="cursor-pointer"
                 onPointerEnter={() => setHover(index)}
                 onPointerLeave={() => setHover(null)}
               >
                 <title>{`${labelOf(muscle)} · ${formatCompact(values[index])} kg`}</title>
-                <MuscleGlyph muscle={muscle} active={active} />
+                <rect
+                  x={spot.x - 22}
+                  y={spot.y - imgH / 2 - 8}
+                  width="44"
+                  height={imgH + 22}
+                  fill="transparent"
+                />
+                <image
+                  href={MUSCLE_IMG[muscle]}
+                  x={spot.x - icon / 2}
+                  y={spot.y - imgH / 2 - 6}
+                  width={icon}
+                  height={imgH}
+                  opacity={active ? 1 : 0.92}
+                />
+                <text
+                  x={spot.x}
+                  y={spot.y + imgH / 2 + 6}
+                  textAnchor="middle"
+                  fill={active ? 'var(--fg)' : 'var(--muted)'}
+                  fontSize="10"
+                  fontWeight={active ? 600 : 400}
+                >
+                  {labelOf(muscle)}
+                </text>
               </g>
             )
           })}
         </svg>
-        {hovered != null && (
-          <p className="pointer-events-none absolute inset-x-0 bottom-1 text-center text-xs text-[var(--muted)]">
-            <span className="font-medium text-[var(--fg)]">{labelOf(hovered)}</span>
-            {' · '}
-            {formatCompact(values[hover ?? 0])} kg volume
-          </p>
-        )}
+        <p className="mt-1 min-h-4 text-center text-xs text-[var(--muted)]">
+          {hovered != null ? (
+            <>
+              <span className="font-medium text-[var(--fg)]">{labelOf(hovered)}</span>
+              {' · '}
+              {formatCompact(values[hover ?? 0])} kg volume
+            </>
+          ) : (
+            '\u00a0'
+          )}
+        </p>
       </div>
     </div>
-  )
-}
-
-function MuscleGlyph({ muscle, active }: { muscle: Axis; active: boolean }) {
-  const back = ['BACK', 'TRICEPS', 'HAMS', 'CALVES', 'GLUTES'].includes(muscle)
-  return (
-    <svg width="40" height="56" viewBox="0 0 48 88" aria-hidden className={active ? 'opacity-100' : 'opacity-95'}>
-      <Body wide={back} />
-      {muscle === 'CHEST' && (
-        <g fill={HIGHLIGHT}>
-          <ellipse cx="19.2" cy="28.5" rx="5.2" ry="6.2" />
-          <ellipse cx="28.8" cy="28.5" rx="5.2" ry="6.2" />
-        </g>
-      )}
-      {muscle === 'SHOULDERS' && (
-        <g fill={HIGHLIGHT}>
-          <ellipse cx="13.2" cy="23.5" rx="5" ry="4.4" />
-          <ellipse cx="34.8" cy="23.5" rx="5" ry="4.4" />
-        </g>
-      )}
-      {muscle === 'BICEPS' && (
-        <g fill={HIGHLIGHT}>
-          <ellipse cx="11.4" cy="36" rx="3.4" ry="7.2" />
-          <ellipse cx="36.6" cy="36" rx="3.4" ry="7.2" />
-        </g>
-      )}
-      {muscle === 'CORE' && <ellipse cx="24" cy="39" rx="5.4" ry="8.2" fill={HIGHLIGHT} />}
-      {muscle === 'QUADS' && (
-        <g fill={HIGHLIGHT}>
-          <ellipse cx="19.2" cy="62" rx="4.2" ry="10" />
-          <ellipse cx="28.8" cy="62" rx="4.2" ry="10" />
-        </g>
-      )}
-      {muscle === 'BACK' && <ellipse cx="24" cy="32" rx="9.4" ry="10.5" fill={HIGHLIGHT} />}
-      {muscle === 'TRICEPS' && (
-        <g fill={HIGHLIGHT}>
-          <ellipse cx="11.2" cy="37" rx="3.2" ry="7.6" />
-          <ellipse cx="36.8" cy="37" rx="3.2" ry="7.6" />
-        </g>
-      )}
-      {muscle === 'HAMS' && (
-        <g fill={HIGHLIGHT}>
-          <ellipse cx="19.2" cy="63" rx="4" ry="9.4" />
-          <ellipse cx="28.8" cy="63" rx="4" ry="9.4" />
-        </g>
-      )}
-      {muscle === 'GLUTES' && (
-        <g fill={HIGHLIGHT}>
-          <ellipse cx="19.6" cy="51.5" rx="5" ry="4.6" />
-          <ellipse cx="28.4" cy="51.5" rx="5" ry="4.6" />
-        </g>
-      )}
-      {muscle === 'CALVES' && (
-        <g fill={HIGHLIGHT}>
-          <ellipse cx="18.8" cy="77" rx="3.4" ry="6.4" />
-          <ellipse cx="29.2" cy="77" rx="3.4" ry="6.4" />
-        </g>
-      )}
-    </svg>
-  )
-}
-
-function Body({ wide = false }: { wide?: boolean }) {
-  const torso = wide
-    ? 'M14.8 20.6h18.4l-2.6 28.6H17.4z'
-    : 'M16.2 20.6h15.6l-2.4 28.6H18.6z'
-  return (
-    <g fill="currentColor">
-      <ellipse cx="24" cy="8.4" rx="6.6" ry="7.4" />
-      <rect x="21.2" y="15" width="5.6" height="5.2" rx="1.6" />
-      <path d={torso} />
-      <path d="M16.4 22.2c-4.6 2.8-7 9.6-7.4 16.8-.2 4.2.8 8.4 2.2 10.6l3.2-1.4c-.8-2.4-1.4-6.2-1.2-10.2.4-5.6 2.2-11 5.2-13.6z" />
-      <path d="M31.6 22.2c4.6 2.8 7 9.6 7.4 16.8.2 4.2-.8 8.4-2.2 10.6l-3.2-1.4c.8-2.4 1.4-6.2 1.2-10.2-.4-5.6-2.2-11-5.2-13.6z" />
-      <path d="M18.8 49.2 16.6 82.4c.4 1.4 2.2 1.8 3.4.6l3-30.2z" />
-      <path d="M29.2 49.2 31.4 82.4c-.4 1.4-2.2 1.8-3.4.6l-3-30.2z" />
-    </g>
   )
 }

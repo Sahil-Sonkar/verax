@@ -36,7 +36,7 @@ export function Dialog({
     <div className="fixed inset-0 flex items-end justify-center sm:items-center sm:p-4" style={{ zIndex: 40 + layer * 10 }}>
       <button
         type="button"
-        className="absolute inset-0 cursor-default bg-[color-mix(in_srgb,var(--fg)_42%,transparent)]"
+        className="absolute inset-0 cursor-default bg-[color-mix(in_srgb,#000_42%,transparent)]"
         aria-label="Close dialog"
         onClick={onClose}
       />

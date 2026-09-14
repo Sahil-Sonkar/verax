@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { formatCompact, formatInr, formatMoney, formatSigned, parseAmount } from '../lib/format'
 import { Dialog, PrimaryButton } from '../components/Dialog'
 import { AddButton, TrashButton } from '../components/IconButtons'
+import { PageHeader } from '../components/PageHeader'
 import { SankeyFlow, type FlowChart } from '../components/SankeyFlow'
 import { MonoArea } from '../components/mono/MonoArea'
 import { MonoDonut } from '../components/mono/MonoDonut'
@@ -573,15 +574,11 @@ export function InvestmentsPage({ section = 'all' }: { section?: 'all' | 'invest
     <div className="space-y-10">
       {section === 'all' && (
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-4xl tracking-tight">Invest</h1>
-            <p className="mt-2 max-w-[65ch] text-sm text-[var(--muted)]">
-              Monthly workbook in the same shape as your spreadsheet. Blank stays blank. Zero stays zero.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <AddButton label="Add holding" variant="primary" onClick={() => setOpen(true)} />
-          </div>
+          <PageHeader
+            title="Invest"
+            lead="Monthly workbook in the same shape as your spreadsheet. Blank stays blank. Zero stays zero."
+          />
+          <AddButton label="Add holding" variant="primary" onClick={() => setOpen(true)} />
         </div>
       )}
       {section !== 'all' && showInvest && (

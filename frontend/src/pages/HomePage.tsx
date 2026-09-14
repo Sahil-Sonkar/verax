@@ -6,14 +6,14 @@ import { ConsistencyHeatmap } from '../components/Heatmap'
 import { Glyph } from '../components/Glyph'
 import { MonoLine } from '../components/mono/MonoLine'
 import { TrackerHabitRow } from '../components/TrackerHabitRow'
-import { Button } from '@/components/ui/button'
+import { PageHeader } from '../components/PageHeader'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { api } from '../lib/api'
 import { flattenDay, isStepsHabit, isWaterHabit, pickTracked } from '../lib/dailyHabits'
 import { HABIT_ICON_PICKER, habitIcon } from '../lib/habitIcons'
 import { habitColor, habitDayColor, nextHabitStatus } from '../lib/colors'
-import type { CompletionStatus, DayMeals, DaySnapshot, Habit, HabitPoint, HabitSeries, HeatCell, Tracker } from '../types'
+import type { CompletionStatus, DayMeals, DaySnapshot, Habit, HabitItem, HabitPoint, HabitSeries, HeatCell, Tracker } from '../types'
 
 function iso(date: Date) {
   return new Intl.DateTimeFormat('en-CA').format(date)
@@ -49,6 +49,7 @@ function seriesCells(points: HabitPoint[]): HeatCell[] {
 export function HomePage() {
   const queryClient = useQueryClient()
   const [steps, setSteps] = useState('')
+  const [stepsItem, setStepsItem] = useState<HabitItem | null>(null)
   const [sheet, setSheet] = useState<Habit | 'new' | null>(null)
   const today = useQuery({ queryKey: ['today'], queryFn: () => api<DaySnapshot>('/api/days/today') })
   const meals = useQuery({
@@ -69,6 +70,8 @@ export function HomePage() {
   const trails = new Map((tracker.data?.trails ?? []).map((row) => [row.habitId, row.days]))
   const waterLiters = (meals.data?.waterMl ?? 0) / 1000
   const points = linePoints(tracker.data?.heatmap ?? [])
+  /** Same precedence the backend's thresholdFor uses, so Done/Half agree with an auto-synced day. */
+  const stepsTarget = stepsItem?.habit.autoCompleteThreshold ?? stepsItem?.habit.targetValue ?? 7000
 
   const mark = useMutation({
     mutationFn: ({ habitId, status, value }: { habitId: string; status: CompletionStatus; value?: number }) =>
@@ -84,8 +87,10 @@ export function HomePage() {
     },
   })
   const logSteps = useMutation({
-    mutationFn: (value: number) =>
-      api('/api/integrations/ingest', {
+    /** Records the metric, then sets the status explicitly: a typed-in count is a deliberate log,
+     *  so anything short of the target is Half rather than the sensor path's 50%-or-nothing rule. */
+    mutationFn: async ({ habitId, value, target }: { habitId: string; value: number; target: number }) => {
+      await api('/api/integrations/ingest', {
         method: 'POST',
         body: JSON.stringify({
           provider: 'GOOGLE_HEALTH',
@@ -94,11 +99,23 @@ export function HomePage() {
           date: today.data?.date,
           value,
         }),
-      }),
-    onSuccess: () => {
+      })
+      return api<DaySnapshot>(`/api/days/${today.data?.date}/habits/${habitId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          status: value >= target ? 'COMPLETED' : 'PARTIAL',
+          value,
+          note: `${value.toLocaleString('en-IN')} steps`,
+        }),
+      })
+    },
+    onSuccess: (data) => {
       setSteps('')
-      void queryClient.invalidateQueries({ queryKey: ['today'] })
+      setStepsItem(null)
+      queryClient.setQueryData(['today'], data)
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       void queryClient.invalidateQueries({ queryKey: ['tracker'] })
+      void queryClient.invalidateQueries({ queryKey: ['habit-series'] })
     },
   })
   const remove = useMutation({
@@ -112,14 +129,12 @@ export function HomePage() {
   })
 
   return (
-    <div className="flex min-w-0 flex-col gap-10">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <p className="kicker">Today</p>
-          <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Habits</h1>
-        </div>
-        <AddButton label="Add habit" variant="primary" onClick={() => setSheet('new')} />
-      </div>
+    <div className="page">
+      <PageHeader
+        kicker="Today"
+        title="Habits"
+        actions={<AddButton label="Add habit" variant="primary" onClick={() => setSheet('new')} />}
+      />
 
       <section>
         {today.isError ? (
@@ -131,41 +146,16 @@ export function HomePage() {
         ) : tracked.length === 0 ? (
           <p className="py-8 text-sm text-[var(--muted)]">No habits on this list yet. Add one to start tracking.</p>
         ) : (
-          <div className="border-y border-[var(--line)]">
+          <div className="card overflow-hidden">
             {tracked.map((item) => (
-              <div key={item.habit.id}>
-                <TrackerHabitRow
-                  item={item}
-                  trail={trails.get(item.habit.id) ?? []}
-                  waterLiters={isWaterHabit(item) ? waterLiters : undefined}
-                  onStatus={(habitId, status, value) => mark.mutate({ habitId, status, value })}
-                  onOpen={() => setSheet(item.habit)}
-                />
-                {isStepsHabit(item) && item.status !== 'COMPLETED' && (
-                  <form
-                    className="flex gap-2 px-1 pb-4 pl-11"
-                    onSubmit={(event) => {
-                      event.preventDefault()
-                      const value = Number(steps)
-                      if (!Number.isFinite(value) || value <= 0) return
-                      logSteps.mutate(value)
-                    }}
-                  >
-                    <Input
-                      type="number"
-                      min={1}
-                      inputMode="numeric"
-                      placeholder="Steps today"
-                      value={steps}
-                      onChange={(event) => setSteps(event.target.value)}
-                      aria-label="Today's steps"
-                    />
-                    <Button type="submit" size="sm" disabled={logSteps.isPending}>
-                      Log
-                    </Button>
-                  </form>
-                )}
-              </div>
+              <TrackerHabitRow
+                key={item.habit.id}
+                item={item}
+                trail={trails.get(item.habit.id) ?? []}
+                waterLiters={isWaterHabit(item) ? waterLiters : undefined}
+                onStatus={(habitId, status, value) => mark.mutate({ habitId, status, value })}
+                onOpen={() => (isStepsHabit(item) ? setStepsItem(item) : setSheet(item.habit))}
+              />
             ))}
           </div>
         )}
@@ -207,6 +197,36 @@ export function HomePage() {
             void queryClient.invalidateQueries({ queryKey: ['tracker'] })
           }}
         />
+      )}
+      {stepsItem && (
+        <Dialog title="Log steps" onClose={() => setStepsItem(null)}>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const value = Number(steps)
+              if (!Number.isFinite(value) || value <= 0) return
+              logSteps.mutate({ habitId: stepsItem.habit.id, value, target: stepsTarget })
+            }}
+          >
+            <label htmlFor="steps-today" className="text-sm text-[var(--muted)]">
+              How many steps did you do today? Under {stepsTarget.toLocaleString('en-IN')} counts as half.
+            </label>
+            <Input
+              id="steps-today"
+              type="number"
+              min={1}
+              inputMode="numeric"
+              placeholder={String(stepsTarget)}
+              value={steps}
+              onChange={(event) => setSteps(event.target.value)}
+              autoFocus
+            />
+            <PrimaryButton type="submit" disabled={logSteps.isPending} className="self-end">
+              {logSteps.isPending ? 'Saving…' : 'Log steps'}
+            </PrimaryButton>
+          </form>
+        </Dialog>
       )}
       {sheet && sheet !== 'new' && todayIso && (
         <HabitDialog

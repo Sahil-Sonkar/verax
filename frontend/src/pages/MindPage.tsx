@@ -7,6 +7,8 @@ import { Dialog, PrimaryButton } from '../components/Dialog'
 import { FocusTimer } from '../components/FocusTimer'
 import { MindJournal } from '../components/MindJournal'
 import { TrashButton } from '../components/IconButtons'
+import { PageHeader, PageTabs } from '../components/PageHeader'
+import { ChartCard } from '../components/mono/ChartCard'
 import { api } from '../lib/api'
 import type { SleepSummary } from '../types'
 
@@ -46,30 +48,13 @@ export function MindPage() {
   const [tab, setTab] = useState<Tab>('journal')
 
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="kicker">Quiet</p>
-        <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Mind</h1>
-        <p className="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-[var(--muted)]">
-          Notes, a sit, and sleep. Each stays on its own tab.
-        </p>
-      </div>
-      <div className="flex gap-1 overflow-x-auto border-b border-[var(--line)]" role="tablist" aria-label="Mind">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.id}
-            className={`flex-1 px-3.5 py-3 text-[13px] font-medium tracking-wide ${
-              tab === item.id ? 'text-[var(--fg)] shadow-[inset_0_-2px_0_var(--fg)]' : 'text-[var(--muted)]'
-            }`}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+    <div className="page">
+      <PageHeader
+        kicker="Quiet"
+        title="Mind"
+        lead="Notes, a sit, and sleep. Each stays on its own tab."
+      />
+      <PageTabs label="Mind" value={tab} items={TABS} onChange={setTab} />
 
       {tab === 'journal' && <MindJournal />}
       {tab === 'meditation' && <MeditationPanel />}
@@ -169,9 +154,10 @@ function SleepPanel() {
           <SleepStat label="Deep" value={latest.deepMin} />
         </div>
       )}
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard title="Stages">
         <MonoBars
-          className="h-72"
+          className="h-64"
           data={chart}
           categoryKey="period"
           bars={[
@@ -181,7 +167,10 @@ function SleepPanel() {
             { key: 'deep', name: 'Deep', fill: 'var(--mint)' },
           ]}
         />
-        <MonoLine className="h-72" data={chart} xKey="period" valueKey="score" domain={[0, 100]} />
+        </ChartCard>
+        <ChartCard title="Score">
+        <MonoLine className="h-64" data={chart} xKey="period" valueKey="score" domain={[0, 100]} />
+        </ChartCard>
       </div>
       {sleep.data && sleep.data.nights.length === 0 && (
         <p className="text-sm text-[var(--muted)]">No nights in this range.</p>

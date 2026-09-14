@@ -37,6 +37,9 @@ public class TrainSet {
     @Column(name = "set_index", nullable = false)
     private int setIndex = 1;
 
+    @Column(name = "sort_order", nullable = false)
+    private int sortOrder;
+
     private Integer reps;
 
     private BigDecimal kg;
@@ -85,6 +88,14 @@ public class TrainSet {
 
     public void setSetIndex(int setIndex) {
         this.setIndex = setIndex;
+    }
+
+    public int getSortOrder() {
+        return sortOrder;
+    }
+
+    public void setSortOrder(int sortOrder) {
+        this.sortOrder = sortOrder;
     }
 
     public Integer getReps() {

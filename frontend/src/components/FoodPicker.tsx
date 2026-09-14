@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Check, Plus, Search } from 'lucide-react'
 import { Dialog } from './Dialog'
 import { api } from '../lib/api'
+import { MACRO_COLORS } from '../lib/colors'
 import type { FoodHit, FoodServing } from '../types'
 
 export const FOOD_MICROS = [
@@ -41,12 +42,6 @@ const DEFAULT_SERVINGS: FoodServing[] = [
   { label: '100 ml', amount: 100, unit: 'ml' },
   { label: '250 ml', amount: 250, unit: 'ml' },
 ]
-
-const MACRO_COLORS = {
-  carbs: '#2aa7a1',
-  fat: '#8b6bb5',
-  protein: '#e0a03a',
-}
 
 export function scaleFood(hit: FoodHit, grams: number, unit: 'g' | 'ml' = 'g'): PickedFood {
   const g = grams > 0 ? grams : 100
@@ -239,7 +234,7 @@ export function FoodSearch({ onSelect }: { onSelect: (hit: FoodHit) => void }) {
               </button>
               <button
                 type="button"
-                className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--diary-blue)] text-white"
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-[var(--diary-blue)] text-[var(--accent-fg)]"
                 aria-label={`Add ${hit.name}`}
                 onClick={() => onSelect(hit)}
               >

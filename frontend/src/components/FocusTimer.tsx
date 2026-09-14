@@ -135,7 +135,7 @@ export function FocusTimer({
         ))}
       </div>
       )}
-      <div className={`${compact ? 'mt-2' : 'mt-6'} text-5xl tracking-tight tabular`}>{formatClock(remaining)}</div>
+      <div className={`${compact ? 'mt-2' : 'mt-6'} text-4xl tracking-tight tabular lg:text-5xl`}>{formatClock(remaining)}</div>
       <div className="segmented mt-3">
         {PRESETS.map((preset) => (
           <button

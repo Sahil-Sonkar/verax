@@ -1,7 +1,7 @@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { CompletionStatus, HabitItem } from '../types'
 import { importanceLabel } from '../lib/format'
-import { categoryColor } from '../lib/colors'
+import { categoryColor, inkOn } from '../lib/colors'
 import { clsx } from 'clsx'
 
 const STATUSES: { value: CompletionStatus; label: string; color: string }[] = [
@@ -40,8 +40,8 @@ export function HabitRow({
           <div className="flex items-center gap-3">
             {isGroup ? (
               <span
-                className="grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold text-white"
-                style={{ background: accent }}
+                className="grid size-8 shrink-0 place-items-center rounded-full text-xs font-semibold"
+                style={{ background: accent, color: inkOn(accent) }}
                 aria-hidden="true"
               >
                 {item.habit.name.slice(0, 1)}
@@ -52,9 +52,10 @@ export function HabitRow({
                 onClick={() => onStatus(item.habit.id, item.status === 'COMPLETED' ? 'MISSED' : 'COMPLETED')}
                 aria-pressed={item.status === 'COMPLETED'}
                 aria-label={`Mark ${item.habit.name} ${item.status === 'COMPLETED' ? 'missed' : 'done'}`}
-                className="grid size-11 shrink-0 place-items-center rounded-full text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                className="grid size-11 shrink-0 place-items-center rounded-full text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 style={{
                   background: item.status === 'COMPLETED' ? 'var(--mint)' : accent,
+                  color: inkOn(item.status === 'COMPLETED' ? 'var(--mint)' : accent),
                   opacity: item.status === 'COMPLETED' ? 1 : 0.85,
                 }}
               >

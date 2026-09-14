@@ -52,21 +52,21 @@ function Stepper({
     <div className="flex min-w-0 items-center rounded-lg border border-[var(--line)]">
       <button
         type="button"
-        className="px-2.5 py-2 text-lg leading-none text-[var(--muted)]"
+        className="grid size-11 shrink-0 place-items-center text-lg leading-none text-[var(--muted)]"
         aria-label="Decrease"
         onClick={() => onChange(String(Math.max(0, Math.round((n - step) * 100) / 100)))}
       >
         −
       </button>
       <input
-        className="w-full min-w-0 border-0 bg-transparent py-2 text-center text-base tabular outline-none"
+        className="h-11 w-full min-w-0 border-0 bg-transparent text-center text-base tabular outline-none"
         inputMode={decimal ? 'decimal' : 'numeric'}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
       <button
         type="button"
-        className="px-2.5 py-2 text-lg leading-none text-[var(--muted)]"
+        className="grid size-11 shrink-0 place-items-center text-lg leading-none text-[var(--muted)]"
         aria-label="Increase"
         onClick={() => onChange(String(Math.round((n + step) * 100) / 100))}
       >
@@ -132,30 +132,28 @@ export function GuidedWorkout({
   }
 
   return (
-    <section className="panel">
-      <div className="card p-4 min-[720px]:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="text-xs text-[var(--muted)]">Live session</div>
-            <div className="text-xl min-[720px]:text-2xl">{session.name}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-[var(--muted)]">Workout</div>
-            <div className="tabular text-3xl min-[720px]:text-4xl">{clock(elapsed)}</div>
-            <RestTimer />
-          </div>
+    <section className="card p-4">
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="kicker">Live session</p>
+          <h2 className="mt-1 truncate text-lg font-medium tracking-tight">{session.name}</h2>
         </div>
-        <div className="mt-5 space-y-6 min-[720px]:mt-6 min-[720px]:space-y-8">
-          {groups.map(([name, rows]) => {
+        <div className="shrink-0 text-right">
+          <div className="text-xs text-[var(--muted)]">Workout</div>
+          <div className="tabular text-2xl tracking-tight lg:text-3xl">{clock(elapsed)}</div>
+          <RestTimer />
+        </div>
+      </div>
+      <div className="mt-4 space-y-5">
+        {groups.map(([name, rows]) => {
             const ex = findExercise(name)
             const last = lastFor(history, name, session.id)
             const est = best1RM(
               history.flatMap((row) => row.sets.filter((set) => set.exerciseName === name)),
             )
             return (
-              <div key={name} className="grid grid-cols-1 gap-3 min-[720px]:grid-cols-2 min-[720px]:items-stretch">
-                <div className="relative h-48 min-[720px]:h-auto min-[720px]:min-h-[min(22rem,calc(100svh-14rem))]">
-                  <div className="absolute inset-0 overflow-hidden rounded-xl bg-[var(--surface-2)]">
+              <div key={name} className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:items-start">
+                <div className="relative h-36 overflow-hidden rounded-xl bg-[var(--surface-2)] lg:h-52">
                     {ex ? (
                       <ExerciseMedia ex={ex} split />
                     ) : (
@@ -163,9 +161,8 @@ export function GuidedWorkout({
                         No demo for this movement
                       </div>
                     )}
-                  </div>
                 </div>
-                <div className="flex min-h-0 flex-col rounded-xl bg-[var(--surface-2)] p-3 min-[720px]:min-h-[min(22rem,calc(100svh-14rem))]">
+                <div className="flex min-h-0 flex-col rounded-xl bg-[var(--surface-2)] p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="font-medium capitalize">{name}</div>
@@ -263,7 +260,7 @@ export function GuidedWorkout({
             )
           })}
         </div>
-        <div className="mt-6">
+        <div className="mt-5">
           <PrimaryButton
             onClick={async () => {
               for (const set of session.sets) {
@@ -275,7 +272,6 @@ export function GuidedWorkout({
             End session
           </PrimaryButton>
         </div>
-      </div>
     </section>
   )
 }

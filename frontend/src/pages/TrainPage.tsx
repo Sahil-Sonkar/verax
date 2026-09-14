@@ -7,6 +7,8 @@ import { Dialog, PrimaryButton } from '../components/Dialog'
 import { AddButton, TrashButton } from '../components/IconButtons'
 import { GuidedWorkout } from '../components/GuidedWorkout'
 import { ExerciseMedia } from '../components/ExerciseMedia'
+import { PageHeader, PageTabs } from '../components/PageHeader'
+import { ChartCard } from '../components/mono/ChartCard'
 import { api, getToken } from '../lib/api'
 import { findExercise, searchCatalog } from '../lib/opengym/catalog'
 import { readImageText } from '../lib/ocr'
@@ -267,43 +269,11 @@ export function TrainPage() {
   }
 
   const editing = templates.data?.find((row) => row.id === editingId)
+  const live = Boolean(active.data && !active.data.endedAt)
 
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="kicker">Sessions</p>
-          <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Play</h1>
-          <p className="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-[var(--muted)]">
-            Favourite workouts on the clock. Guided sets, rest timer, and the 1,324-exercise library with demos. End a session for volume and what moved since last time.
-          </p>
-        </div>
-        <div className="flex w-full flex-wrap gap-2 min-[480px]:w-auto">
-          <button type="button" className="glass-btn flex-1 px-4 py-2.5 text-sm min-[480px]:flex-none" onClick={() => setCustomOpen(true)}>
-            New activity
-          </button>
-          <PrimaryButton className="flex-1 min-[480px]:flex-none" onClick={() => setGarminOpen(true)}>Log Garmin</PrimaryButton>
-        </div>
-      </div>
-
-      <div className="flex gap-1 overflow-x-auto border-b border-[var(--line)]" role="tablist" aria-label="Play">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.id}
-            className={`flex-1 px-3.5 py-3 text-[13px] font-medium tracking-wide ${
-              tab === item.id ? 'text-[var(--fg)] shadow-[inset_0_-2px_0_var(--fg)]' : 'text-[var(--muted)]'
-            }`}
-            onClick={() => setTrainTab(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      {active.data && !active.data.endedAt && (
+  if (live && active.data) {
+    return (
+      <div className="page">
         <GuidedWorkout
           session={active.data}
           elapsed={elapsed}
@@ -321,9 +291,29 @@ export function TrainPage() {
             void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
           }}
         />
-      )}
+      </div>
+    )
+  }
 
-      {tab === 'workouts' && !(active.data && !active.data.endedAt) && (
+  return (
+    <div className="page">
+      <PageHeader
+        kicker="Sessions"
+        title="Play"
+        lead="Favourite workouts on the clock. Guided sets, rest timer, and the 1,324-exercise library with demos. End a session for volume and what moved since last time."
+        actions={
+          <>
+            <button type="button" className="glass-btn px-4 text-sm" onClick={() => setCustomOpen(true)}>
+              New activity
+            </button>
+            <PrimaryButton onClick={() => setGarminOpen(true)}>Log Garmin</PrimaryButton>
+          </>
+        }
+      />
+
+      <PageTabs label="Play" value={tab} items={TABS} onChange={setTrainTab} />
+
+      {tab === 'workouts' && (
         <section>
           {editing ? (
             <WorkoutEditor
@@ -416,15 +406,16 @@ export function TrainPage() {
                 ))}
               </div>
             )}
-            <div className="grid gap-8 lg:grid-cols-2">
-              <MuscleSplit points={radar} />
-              <div>
-                <h3 className="text-lg tracking-tight">Volume</h3>
-                <p className="mt-0.5 text-sm text-[var(--muted)]">
-                  {activeLabel ? `${activeLabel} · load for this ${grain}` : `Load by ${grain}`}
-                </p>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <ChartCard>
+                <MuscleSplit points={radar} />
+              </ChartCard>
+              <ChartCard
+                title="Volume"
+                hint={activeLabel ? `${activeLabel} · load for this ${grain}` : `Load by ${grain}`}
+              >
                 <MonoLine
-                  className="mt-4 h-80"
+                  className="h-72"
                   data={trends}
                   valueKey="volume"
                   format={(value) => `${Math.round(value)} kg`}
@@ -432,7 +423,7 @@ export function TrainPage() {
                     if (typeof row.period === 'string') setSelectedPeriod(row.period)
                   }}
                 />
-              </div>
+              </ChartCard>
             </div>
           </section>
           <section>

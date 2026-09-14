@@ -8,6 +8,7 @@ import { SankeyFlow } from '../components/SankeyFlow'
 import { api } from '../lib/api'
 import { formatCompact, formatInr } from '../lib/format'
 import { InvestmentsPage } from './InvestmentsPage'
+import { PageHeader, PageTabs } from '../components/PageHeader'
 import type { FinanceAccount, FinanceLoan, FinanceLoanPayment, Portfolio, PriceQuote, TaxCompare, TaxItem } from '../types'
 
 const LOAN_LINE_COLORS = BLOCK_COLORS
@@ -119,30 +120,13 @@ export function FinancePage() {
   })
 
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="kicker">Ledgers</p>
-        <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Money</h1>
-        <p className="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-[var(--muted)]">
-          Live prices from Google Finance. Budget stays a workbook.
-        </p>
-      </div>
-      <div className="flex gap-1 overflow-x-auto border-b border-[var(--line)]" role="tablist" aria-label="Money">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.id}
-            className={`shrink-0 px-3.5 py-3 text-[13px] font-medium tracking-wide ${
-              tab === item.id ? 'text-[var(--fg)] shadow-[inset_0_-2px_0_var(--fg)]' : 'text-[var(--muted)]'
-            }`}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+    <div className="page">
+      <PageHeader
+        kicker="Ledgers"
+        title="Money"
+        lead="Live prices from Google Finance. Budget stays a workbook."
+      />
+      <PageTabs label="Money" value={tab} items={TABS} onChange={setTab} />
 
       {tab === 'invest' && (
         <div className="space-y-6">

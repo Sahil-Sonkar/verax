@@ -8,6 +8,7 @@ import { RoutineCalendar } from '../components/RoutineCalendar'
 import { Sectograph } from '../components/Sectograph'
 import { TimeField } from '../components/TimeField'
 import { WeekdayChips } from '../components/WeekdayChips'
+import { PageHeader } from '../components/PageHeader'
 import { ApiError, api } from '../lib/api'
 import { DEFAULT_SWATCH } from '../lib/colors'
 import { formatClock, isoWeekday, parseClock, timesOverlap, toTimeInput, WEEKDAY_LABELS } from '../lib/weekdays'
@@ -248,22 +249,18 @@ export function RoutinePage() {
   const viewTasks = open?.tasks.filter((task) => taskOnDay(task, weekday)) ?? []
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="kicker">Week</p>
-          <h1 className="mt-2 text-4xl tracking-tight min-[720px]:text-5xl">Routine</h1>
-          <p className="mt-3 max-w-[58ch] text-[15px] leading-relaxed text-[var(--muted)]">
+    <div className="page">
+      <PageHeader
+        kicker="Week"
+        title="Routine"
+        lead={
+          <>
             One line per block. Day is the clock. Week and month are a calendar of the same repeating week
             {googleCal.data?.connected ? ` · two-way with ${googleCal.data.email ?? 'Google Calendar'}` : ''}.
-          </p>
-          {blockError && !open && !create && (
-            <p className="mt-2 text-sm text-[var(--danger)]" role="alert">
-              {blockError}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+          </>
+        }
+        actions={
+          <>
           <div className="flex rounded-lg border border-[var(--line)] p-0.5">
             {(['day', 'week', 'month'] as const).map((option) => (
               <button
@@ -298,8 +295,14 @@ export function RoutinePage() {
               Sync Google
             </button>
           )}
-        </div>
-      </div>
+          </>
+        }
+      />
+      {blockError && !open && !create && (
+        <p className="text-sm text-[var(--danger)]" role="alert">
+          {blockError}
+        </p>
+      )}
 
       {view === 'day' && (
         <>

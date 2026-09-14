@@ -9,7 +9,9 @@ import { Link } from 'react-router-dom'
 import { Dialog, PrimaryButton } from '../components/Dialog'
 import { AddButton, TrashButton } from '../components/IconButtons'
 import { FOOD_MICROS, FoodEntryDialog, FoodPicker, FoodSearch, MacroBoard, MicroList, hitFromMacros, type PickedFood } from '../components/FoodPicker'
+import { PageTabs } from '../components/PageHeader'
 import { api } from '../lib/api'
+import { MACRO_COLORS } from '../lib/colors'
 import type { DayMeals, FoodHit, FoodLine, FuelSupplement, Meal, MealSummary, Recipe, UserFood } from '../types'
 
 const MEAL_SLOTS = [
@@ -29,20 +31,25 @@ const WATER_POURS = [
   { ml: 1000, label: '1 L' },
 ] as const
 const MACRO_SPLIT = { carbs: 0.5, protein: 0.2, fat: 0.3 }
-const MACRO_COLORS = { carbs: '#c4923a', fat: '#3d7ec9', protein: '#c94b52' }
 const MACRO_SERIES = [
   { key: 'protein' as const, label: 'Protein', color: MACRO_COLORS.protein },
   { key: 'carbs' as const, label: 'Carbs', color: MACRO_COLORS.carbs },
   { key: 'fat' as const, label: 'Fat', color: MACRO_COLORS.fat },
 ]
 const MEAL_COLORS: Record<string, string> = {
-  Breakfast: '#3d7ec9',
-  Lunch: '#c4923a',
-  Dinner: '#c94b52',
-  Snacks: '#5b9bd6',
-  Other: '#6f6e6a',
+  Breakfast: 'var(--sky)',
+  Lunch: 'var(--brass)',
+  Dinner: 'var(--danger)',
+  Snacks: 'var(--mint)',
+  Other: 'var(--muted)',
 }
 type DiaryTab = 'diary' | 'recipes' | 'supplements' | 'nutrition'
+const DIARY_TABS = [
+  { id: 'diary', label: 'Diary' },
+  { id: 'recipes', label: 'Recipes' },
+  { id: 'supplements', label: 'Supplements' },
+  { id: 'nutrition', label: 'Nutrition' },
+] as const
 type SupplementDraft = { name: string; dose: string; timing: string; notes: string }
 type UserFoodDraft = {
   name: string
@@ -264,7 +271,7 @@ export function FuelPage() {
       const kcal = (day.data?.meals ?? [])
         .filter((meal) => meal.slot === slot.id)
         .reduce((sum, meal) => sum + Number(meal.totals.kcal), 0)
-      return { name: slot.label, value: kcal, color: MEAL_COLORS[slot.label] ?? '#8e8e93' }
+      return { name: slot.label, value: kcal, color: MEAL_COLORS[slot.label] ?? 'var(--muted)' }
     })
     .filter((row) => row.value > 0)
 
@@ -509,31 +516,31 @@ export function FuelPage() {
   return (
     <div className="diary-page">
       <div className="diary-chrome">
-      <div className="flex items-center justify-between px-2 py-2">
-        <button type="button" className="grid size-10 place-items-center text-[var(--diary-blue)]" onClick={() => setDate(shift(date, -1))} aria-label="Previous day">
+      <div className="flex items-center justify-between py-1">
+        <button type="button" className="grid size-11 place-items-center text-[var(--diary-blue)]" onClick={() => setDate(shift(date, -1))} aria-label="Previous day">
           <Glyph icon={ChevronLeft} size={22} />
         </button>
         <div className="text-center">
           <div className="text-[15px] font-semibold">{formatDiaryDate(date)}</div>
           <input
-            className="mt-0.5 bg-transparent text-center text-xs text-[var(--muted)]"
+            className="mt-0.5 bg-transparent text-center text-[var(--muted)]"
             type="date"
             value={date}
             onChange={(event) => setDate(event.target.value)}
             aria-label="Pick date"
           />
         </div>
-        <button type="button" className="grid size-10 place-items-center text-[var(--diary-blue)]" onClick={() => setDate(shift(date, 1))} aria-label="Next day">
+        <button type="button" className="grid size-11 place-items-center text-[var(--diary-blue)]" onClick={() => setDate(shift(date, 1))} aria-label="Next day">
           <Glyph icon={ChevronRight} size={22} />
         </button>
       </div>
 
-      <div className="flex justify-center gap-1 px-4 pb-3">
+      <div className="flex justify-center gap-1 pb-3">
         {days.map((dayKey, index) => (
           <button
             key={dayKey}
             type="button"
-            className={`grid size-10 place-items-center rounded-[9px] text-xs font-semibold ${
+            className={`grid size-11 place-items-center rounded-[9px] text-xs font-semibold ${
               dayKey === date ? 'bg-[var(--fg)] text-[var(--bg)]' : 'text-[var(--muted)]'
             }`}
             onClick={() => setDate(dayKey)}
@@ -543,29 +550,11 @@ export function FuelPage() {
         ))}
       </div>
 
-      <div className="flex overflow-x-auto border-b border-[var(--line)] bg-[var(--bg)] px-2">
-        {([
-          { id: 'diary', label: 'Diary' },
-          { id: 'recipes', label: 'Recipes' },
-          { id: 'supplements', label: 'Supplements' },
-          { id: 'nutrition', label: 'Nutrition' },
-        ] as const).map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`shrink-0 px-3 py-3 text-[13px] font-semibold ${
-              tab === item.id ? 'text-[var(--diary-blue)] shadow-[inset_0_-2px_0_var(--diary-blue)]' : 'text-[var(--muted)]'
-            }`}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <PageTabs label="Body" value={tab} items={DIARY_TABS} onChange={setTab} />
       </div>
 
       {tab === 'diary' && (
-        <div className="mx-auto w-full max-w-6xl space-y-3 px-3 py-3 lg:grid lg:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)] lg:items-start lg:gap-4 lg:space-y-0">
+        <div className="mx-auto w-full max-w-6xl space-y-3 py-3 lg:grid lg:grid-cols-[minmax(20rem,26rem)_minmax(0,1fr)] lg:items-start lg:gap-4 lg:space-y-0">
           <div className="space-y-3 lg:sticky lg:top-0">
           <button type="button" className="diary-card flex w-full items-center gap-4 px-4 py-4 text-left" onClick={() => { setGoalDraft(String(kcalGoal)); setGoalOpen(true) }}>
             <CalorieRing food={food} goal={kcalGoal} burned={burned} remaining={remaining} />

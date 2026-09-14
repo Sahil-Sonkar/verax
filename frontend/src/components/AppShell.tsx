@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '../lib/auth'
 import { Glyph } from './Glyph'
 import { InstallHint } from './InstallHint'
+import { VeraxWordmark } from './VeraxMark'
 
 const rooms = [
   { to: '/routine', label: 'Routine', icon: Clock3 },
@@ -30,7 +31,7 @@ export function AppShell() {
   const location = useLocation()
   const [menu, setMenu] = useState(false)
   const title = desktop.find((d) => d.to === location.pathname)?.label ?? 'Verax'
-  const fullBleed = location.pathname === '/body'
+
 
   useEffect(() => {
     setMenu(false)
@@ -50,22 +51,19 @@ export function AppShell() {
     document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', onKey)
-      window.removeEventListener('resize', onResize)
       document.body.style.overflow = previous
+      window.removeEventListener('resize', onResize)
     }
   }, [menu])
 
   return (
-    <div className="min-h-dvh bg-[var(--bg)] text-[var(--fg)]">
-      <div className="grain" aria-hidden="true" />
+    <div className="min-h-dvh text-[var(--fg)]">
       <a href="#main" className="skip-link">
         Skip to content
       </a>
-      <aside className="nav-glass fixed z-[20] hidden w-[244px] lg:flex lg:flex-col">
-        <div className="px-6 pb-6 pt-8">
-          <div className="wordmark text-[42px] leading-none" translate="no">
-            Verax
-          </div>
+      <aside className="nav-glass fixed z-[20] hidden lg:flex lg:flex-col">
+        <div className="px-5 pb-6 pt-7">
+          <VeraxWordmark size="lg" />
         </div>
         <nav className="flex-1 px-3" aria-label="Primary">
           <div className="flex flex-col gap-1">
@@ -74,31 +72,27 @@ export function AppShell() {
             ))}
           </div>
         </nav>
-        <div className="flex items-center gap-3 px-6 py-6 text-sm">
-          <span className="grid size-8 place-items-center rounded-[9px] bg-[var(--surface-2)] text-xs font-semibold">
+        <div className="flex items-center gap-3 px-5 py-5 text-sm">
+          <span className="grid size-8 place-items-center rounded-full bg-[color-mix(in_srgb,#ffffff_14%,transparent)] text-xs font-semibold">
             {initials(user?.name)}
           </span>
           {user?.name}
         </div>
       </aside>
 
-      <div className="lg:pl-[244px]">
-        <header className="nav-compact sticky top-0 z-[20] flex min-h-14 items-center gap-2 lg:hidden">
+      <div className="lg:pl-[260px]">
+        <header className="nav-compact sticky z-[20] flex min-h-14 items-center gap-2 lg:hidden">
           <Button type="button" variant="ghost" size="icon-lg" className="size-11" aria-label="Open menu" onClick={() => setMenu(true)}>
             <Glyph icon={Menu} size={22} />
           </Button>
-          <NavLink to="/" className="wordmark min-w-0 flex-1 text-[32px] leading-none" translate="no" aria-label="Home" end>
-            Verax
+          <NavLink to="/" className="min-w-0 flex-1" aria-label="Home" end>
+            <VeraxWordmark size="sm" />
           </NavLink>
           <div className="max-w-[40%] truncate text-sm font-semibold">{title === 'Home' ? '' : title}</div>
         </header>
         <main
           id="main"
-          className={
-            fullBleed
-              ? 'min-h-dvh min-w-0 p-0'
-              : 'min-w-0 px-[max(1rem,env(safe-area-inset-left))] pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-4 pr-[max(1rem,env(safe-area-inset-right))] lg:px-8 lg:pb-12 lg:pt-8'
-          }
+          className="min-w-0 px-[max(1rem,env(safe-area-inset-left))] pb-[calc(5.75rem+env(safe-area-inset-bottom))] pt-4 pr-[max(1rem,env(safe-area-inset-right))] lg:px-8 lg:pb-12 lg:pt-8"
         >
           <InstallHint />
           <Outlet />
@@ -109,20 +103,18 @@ export function AppShell() {
         <div className="fixed inset-0 z-[40] lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 cursor-default bg-[color-mix(in_srgb,var(--fg)_42%,transparent)]"
+            className="absolute inset-0 cursor-default bg-[color-mix(in_srgb,#000_42%,transparent)]"
             aria-label="Close menu"
             onClick={() => setMenu(false)}
           />
           <aside
-            className="nav-glass fixed inset-y-0 left-0 flex w-[min(18rem,86vw)] flex-col pl-[env(safe-area-inset-left)] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+            className="nav-glass fixed flex flex-col"
             role="dialog"
             aria-modal="true"
             aria-label="Sections"
           >
             <div className="flex items-center justify-between px-3 pt-3">
-              <div className="wordmark px-3 text-[32px] leading-none" translate="no">
-                Verax
-              </div>
+              <VeraxWordmark size="sm" />
               <Button type="button" variant="ghost" size="icon-lg" className="size-11" aria-label="Close menu" onClick={() => setMenu(false)}>
                 <Glyph icon={X} size={22} />
               </Button>
@@ -134,8 +126,8 @@ export function AppShell() {
                 ))}
               </div>
             </nav>
-            <div className="flex items-center gap-3 px-6 py-5 text-sm">
-              <span className="grid size-8 place-items-center rounded-[9px] bg-[var(--surface-2)] text-xs font-semibold">
+            <div className="flex items-center gap-3 px-5 py-5 text-sm">
+              <span className="grid size-8 place-items-center rounded-full bg-[color-mix(in_srgb,#ffffff_14%,transparent)] text-xs font-semibold">
                 {initials(user?.name)}
               </span>
               {user?.name}
@@ -145,7 +137,7 @@ export function AppShell() {
       ) : null}
 
       <nav className="tab-glass fixed z-[20] lg:hidden" aria-label="Primary">
-        <div className="grid grid-cols-3">
+        <div className="tab-dock">
           {dock.map((item) => (
             <NavLink
               key={item.to}

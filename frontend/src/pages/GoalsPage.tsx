@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { formatNumber } from '../lib/format'
 import { categoryColor } from '../lib/colors'
 import { ProgressBar } from '../components/Progress'
+import { PageHeader } from '../components/PageHeader'
 import { Dialog, PrimaryButton } from '../components/Dialog'
 import type { Category, Goal } from '../types'
 
@@ -19,17 +20,13 @@ export function GoalsPage() {
   })
 
   return (
-    <div>
-      <div className="flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-4xl tracking-tight">Goals</h1>
-          <p className="mt-2 max-w-lg text-sm text-[var(--muted)]">
-            Goals are destinations. Habits are the road. Keep them separate.
-          </p>
-        </div>
-        <PrimaryButton onClick={() => setOpen(true)}>New Goal</PrimaryButton>
-      </div>
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
+    <div className="page">
+      <PageHeader
+        title="Goals"
+        lead="Goals are destinations. Habits are the road. Keep them separate."
+        actions={<PrimaryButton onClick={() => setOpen(true)}>New Goal</PrimaryButton>}
+      />
+      <div className="grid gap-4 md:grid-cols-2">
         {goals.data?.length === 0 && <p className="text-sm text-[var(--muted)]">No goals yet. Name an outcome.</p>}
         {goals.data?.map((goal) => {
           const accent = categoryColor(goal.category?.name, goal.category?.color)

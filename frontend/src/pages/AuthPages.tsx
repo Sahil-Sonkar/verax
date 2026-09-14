@@ -5,6 +5,7 @@ import { useAuth } from '../lib/auth'
 import { api, ApiError } from '../lib/api'
 import { PrimaryButton } from '../components/Dialog'
 import { InstallHint } from '../components/InstallHint'
+import { VeraxWordmark } from '../components/VeraxMark'
 import type { AuthProviders, AuthResponse } from '../types'
 
 declare global {
@@ -245,8 +246,7 @@ export function RegisterPage() {
 
 function AuthFrame({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="relative flex min-h-dvh items-start justify-center overflow-y-auto bg-[var(--bg)] px-4 pt-[max(2.5rem,calc(env(safe-area-inset-top)+1.25rem))] pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.25rem))] sm:items-center">
-      <div className="grain" aria-hidden="true" />
+    <div className="relative flex min-h-dvh items-start justify-center overflow-y-auto px-4 pt-[max(2.5rem,calc(env(safe-area-inset-top)+1.25rem))] pb-[max(2.5rem,calc(env(safe-area-inset-bottom)+1.25rem))] sm:items-center">
       <a href="#auth-main" className="skip-link">
         Skip to content
       </a>
@@ -254,8 +254,8 @@ function AuthFrame({ title, subtitle, children }: { title: string; subtitle: str
         <InstallHint />
       <div className="panel">
         <div className="card px-5 py-8 sm:px-10 sm:py-12">
-          <div className="wordmark mb-8 text-center text-5xl leading-none" translate="no">
-            Verax
+          <div className="mb-8 flex justify-center">
+            <VeraxWordmark size="lg" />
           </div>
           <h1 className="sr-only">{title}</h1>
           <p className="mb-6 text-center text-sm font-medium tracking-wide text-[var(--muted)]">{subtitle}</p>
