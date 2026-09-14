@@ -28,6 +28,14 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/verax}
     username: ${DATABASE_USER:${USER:}}
     password: ${DATABASE_PASSWORD:}
+    hikari:
+      # Fly's Postgres proxy drops idle connections well inside Hikari's 30-minute
+      # default, so the pool handed out dead sockets and /actuator/health spent
+      # 20s revalidating them past the 5s check timeout. Recycle and ping under that window.
+      max-lifetime: 240000
+      keepalive-time: 60000
+      validation-timeout: 3000
+      connection-timeout: 10000
   jpa:
     open-in-view: false
     hibernate:
